@@ -27,6 +27,13 @@ android {
     }
 }
 
+kotlin {
+    compilerOptions {
+        // RichMarkdownHighlightSpan.range(Utf16Range)가 코어 내부 API다. richmarkdown 모듈과 같은 일괄 opt-in.
+        optIn.add("io.github.jimmyjung.richmarkdown.core.InternalRichMarkdownApi")
+    }
+}
+
 dependencies {
     api(project(":richmarkdown"))
     // QuickJS 바인딩. 호출은 한 파일에 가둬 교체 가능하게 둔다 (D6).

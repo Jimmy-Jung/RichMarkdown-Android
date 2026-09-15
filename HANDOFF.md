@@ -6,7 +6,7 @@
 
 ## 현재 지점
 
-- 커밋: `455d18d` (P0 spike 완료, D4 확정). 그 뒤 P1 병렬 구현 진행 중(미커밋 파일이 있을 수 있음 — `git status` 확인).
+- 커밋: P1-a(공유 모델)·P1-d(Prism) 반영. Compose/View 렌더러·Mermaid는 진행 중(미커밋 파일이 있을 수 있음 — `git status` 확인).
 - 설계 정본: `DEVELOPMENT.md`(결정 D0~D9·D3a, §8 P0 결과). API 계약: `docs/P1-CONTRACTS.md`.
 - 에뮬레이터: AVD `Pixel_6`(android-37.1, 16 KB 페이지). API 24 이미지 `system-images;android-24;google_apis;arm64-v8a` 설치 진행/완료 여부는 `sdkmanager --list_installed`로 확인.
 
@@ -29,10 +29,10 @@ export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:+$JAVA_TOOL_OPTIONS }-Djava.io.tmp
 ## 작업 보드
 
 ### P1 — 렌더러 (진행 중)
-- [ ] `richmarkdown`: `MathRenderService`·`ParseCache`·`RichMarkdownRenderModel`·`RichMarkdownStreamingTextBuffer`·`FontResolution` (계약 §1~4)
+- [x] `richmarkdown`: `MathRenderService`·`ParseCache`·`RichMarkdownRenderModel`·`RichMarkdownStreamingTextBuffer`·`FontResolution` (계약 §1~4) — 단위 11/11
 - [ ] `richmarkdown`: Compose 렌더러 `RichMarkdown()` (`compose/`)
 - [ ] `richmarkdown`: View 렌더러 `RichMarkdownView` (`view/`)
-- [ ] `richmarkdown-highlight`: `PrismHighlighter` + instrumented 테스트
+- [x] `richmarkdown-highlight`: `PrismHighlighter` + instrumented 테스트 13/13
 - [ ] `richmarkdown-mermaid`: `MermaidWebRenderer`·`MermaidDiagramView`·`MermaidDiagramRenderer` + 테스트
 - [ ] 통합 빌드: `:richmarkdown-core:test`, `assembleDebug`, 3모듈 `connectedDebugAndroidTest` 전부 green
 - [ ] 에뮬레이터 스크린샷으로 인라인 수식 baseline·칩·표·스트리밍 확인 (Compose·View 각각)

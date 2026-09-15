@@ -31,6 +31,11 @@ android {
     buildFeatures {
         compose = true
     }
+
+    testOptions {
+        // JVM 단위 테스트는 android.jar stub을 기본값 반환으로 둔다 (Looper·Log 등 미호출 경로 보호).
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 kotlin {
@@ -54,6 +59,11 @@ dependencies {
     implementation(libs.compose.ui.text)
     implementation(libs.compose.foundation)
     implementation(libs.compose.ui.tooling.preview)
+
+    // JVM 단위 테스트 (렌더 모델 순수 로직). Android 모듈은 JUnit4다.
+    testImplementation(libs.kotlin.test)
+    testImplementation("junit:junit:4.13.2")
+    testImplementation(libs.kotlinx.coroutines.test)
 
     // P0 spike instrumented 테스트 (RaTeXSpikeTest). 에뮬레이터에서 connectedDebugAndroidTest로 실행한다.
     androidTestImplementation(libs.androidx.test.runner)
