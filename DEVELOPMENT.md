@@ -2,7 +2,7 @@
 
 - 작성자: JunyoungJung
 - 작성일: 2026-09-15 (KST)
-- 상태: P0 spike 완료(D4 확정), P1 착수
+- 상태: P1 렌더러 구현 완료(컴파일·instrumented 통과), P2 데모·검증 진행
 
 이 문서는 2026-09-15 아키텍처 대화(architecture-dialogue)에서 확정한 결정 세트다. iOS
 [RichMarkdown](https://github.com/Jimmy-Jung/RichMarkdown)의 `DEVELOPMENT.md`에 대응하며,

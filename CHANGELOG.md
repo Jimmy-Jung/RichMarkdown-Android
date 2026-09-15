@@ -34,7 +34,13 @@ semver다. `0.x`에서는 minor 버전에서도 공개 API가 바뀔 수 있다.
   `MermaidWebViewSpikeTest`. 결과는 DEVELOPMENT.md §8. D4(RaTeX) 확정.
 - 빌드: `compileSdk` 37 (Compose BOM 2026.09.00 요구), androidx.test 1.7.0 / ext-junit 1.3.0.
 
+- P1: `MathRenderService`(RaTeX 격리, LruCache 64 MiB, iOS preflight), `ParseCache`, `RichMarkdownRenderModel`
+  (generation·latest-wins·2단계 게시·스트리밍 append 유지, D3a fail-open catch), `RichMarkdownStreamingTextBuffer`.
+- P1: Compose 렌더러 `RichMarkdown()`과 View 렌더러 `RichMarkdownView` — 블록 9종, 인라인 수식 baseline,
+  코드 칩, 표, 코드 블록 헤더·복사, 블록 수식 벡터, 스트리밍 tail(미닫힘 opener 숨김·12 grapheme 페이드).
+- P1: `richmarkdown-highlight` `PrismHighlighter`(QuickJS, iOS 번들 공유, 역할 7종), `richmarkdown-mermaid`
+  `MermaidDiagramRenderer`(WebViewAssetLoader, attach 후 렌더, fail-open). instrumented 테스트 통과.
+
 ### Not yet
 
-- Compose·View 렌더러, `MathRenderService`(RaTeX), QuickJS Prism 실행, WebView Mermaid 실행 —
-  P0 spike(DEVELOPMENT.md §7) 뒤에 들어간다. D3a ②(파서 경계 fail-open catch)는 렌더 모델과 함께 P1.
+- 데모 앱, API 24 desugaring 실측, Maven Central 발행.
