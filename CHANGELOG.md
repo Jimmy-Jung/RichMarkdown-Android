@@ -1,0 +1,36 @@
+# Changelog
+
+형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 버전은 iOS와 독립된
+semver다. `0.x`에서는 minor 버전에서도 공개 API가 바뀔 수 있다.
+
+## [Unreleased]
+
+### Added
+
+- 저장소 골격: Gradle 9.6.0 + AGP 9.4.0 + Kotlin 2.4.20, compileSdk 37 / minSdk 24, 모듈 4개
+  (`richmarkdown-core`, `richmarkdown`, `richmarkdown-highlight`, `richmarkdown-mermaid`),
+  `-Prichmarkdown.buildRoot` 산출물 리다이렉트.
+- `richmarkdown-core` 모델 타입: `Utf16Range`, `MathKind`, `DollarMathOptions`,
+  `ProtectedMathSpan`, `MathDiagnostic`, `ParsedDocument`/`ParsedBlock`/`InlineRun`, `LinkPolicy`,
+  `MathProtector`(길이 보존 mask), `String.unescapingMarkdownPunctuation()`,
+  `@InternalRichMarkdownApi`.
+- `richmarkdown-core` 파이프라인 — iOS `RichMarkdownCore` 이식(UTF-8 byte → UTF-16 code unit):
+  `MathScanner`(hard/soft barrier·block/inline 구분자 규칙·diagnostic), `RichMarkdownParser`
+  (commonmark-java 2-pass: 1차 범위 수집 → 원문 수식 스캔 → mask → 2차 파싱 → 모델 변환,
+  entity/escape 경로 포함), `InputLimits`(256 KiB·64 KiB·block quote 깊이 64·표 32열/512셀),
+  `StreamingTail`(미닫힘 opener 숨김·꼬리 페이드), `CoalescingWorker`(latest-wins, 실행 1 + 대기 1).
+- 코어 JVM 테스트 101건(iOS fixture 이식): `MathScannerFixtureTest` 35, `RichMarkdownParserFixtureTest` 29,
+  `RichMarkdownParserTest` 15, `StreamingTailTest` 12, `MaskRoundTripTest` 5, `CoalescingWorkerTest` 5.
+- `richmarkdown` 공개 API 값 타입(렌더러 미포함): `RichMarkdownTheme`/`RichMarkdownSyntaxColors`,
+  `RichMarkdownColor`, `RichMarkdownFont`/`RichMarkdownTextStyle`/`RichMarkdownFontWeight`,
+  `LatexMathFont`, `LatexDollarMathOptions`, `RichMarkdownStreamingOptions`,
+  `RichMarkdownCodeBlockOptions` + `RichMarkdownSyntaxHighlighting`/`RichMarkdownDiagramRendering`.
+- opt-in 모듈 assets: iOS와 동일한 Prism 1.30.0 번들 22파일(`richmarkdown-highlight`), Mermaid 11.17.2
+  번들·`index.html`·고지(`richmarkdown-mermaid`). 각 모듈 루트 `SYNC-MANIFEST.txt`에 SHA-256 기록.
+- 설계 문서 `DEVELOPMENT.md`(결정 D0~D9·D3a), `README.md`, `THIRD_PARTY_NOTICES.md`.
+- `scripts/sync-ios-assets.sh`: iOS 저장소의 Prism·Mermaid 번들을 복사하고 iOS Docs의 SHA-256 표와 대조한다.
+
+### Not yet
+
+- Compose·View 렌더러, `MathRenderService`(RaTeX), QuickJS Prism 실행, WebView Mermaid 실행 —
+  P0 spike(DEVELOPMENT.md §7) 뒤에 들어간다. D3a ②(파서 경계 fail-open catch)는 렌더 모델과 함께 P1.

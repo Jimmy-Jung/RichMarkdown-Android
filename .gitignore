@@ -1,0 +1,17 @@
+# Gradle
+.gradle/
+build/
+**/build/
+.kotlin/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+local.properties
+
+# macOS
+.DS_Store
+
+# 에이전트 세션 산출물
+.claude/settings.local.json
