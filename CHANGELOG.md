@@ -30,6 +30,10 @@ semver다. `0.x`에서는 minor 버전에서도 공개 API가 바뀔 수 있다.
 - 설계 문서 `DEVELOPMENT.md`(결정 D0~D9·D3a), `README.md`, `THIRD_PARTY_NOTICES.md`.
 - `scripts/sync-ios-assets.sh`: iOS 저장소의 Prism·Mermaid 번들을 복사하고 iOS Docs의 SHA-256 표와 대조한다.
 
+- P0 spike: host `spikes/prism-quickjs`(QuickJS + Prism 번들), instrumented `RaTeXSpikeTest`·`PrismQuickJsAndroidSpikeTest`·
+  `MermaidWebViewSpikeTest`. 결과는 DEVELOPMENT.md §8. D4(RaTeX) 확정.
+- 빌드: `compileSdk` 37 (Compose BOM 2026.09.00 요구), androidx.test 1.7.0 / ext-junit 1.3.0.
+
 ### Not yet
 
 - Compose·View 렌더러, `MathRenderService`(RaTeX), QuickJS Prism 실행, WebView Mermaid 실행 —

@@ -20,6 +20,7 @@ android {
         // D9: androidx.webkit 1.17.0의 floor. 전 모듈 동일.
         minSdk = libs.versions.minSdk.get().toInt()
         consumerProguardFiles("consumer-rules.pro")
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     compileOptions {
@@ -53,4 +54,11 @@ dependencies {
     implementation(libs.compose.ui.text)
     implementation(libs.compose.foundation)
     implementation(libs.compose.ui.tooling.preview)
+
+    // P0 spike instrumented 테스트 (RaTeXSpikeTest). 에뮬레이터에서 connectedDebugAndroidTest로 실행한다.
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(libs.kotlin.test)
 }

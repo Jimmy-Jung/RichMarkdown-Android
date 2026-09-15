@@ -24,7 +24,7 @@ WebView 없이 네이티브로 렌더한다. Jetpack Compose는 `RichMarkdown()`
 
 ## 현재 상태
 
-**골격 단계.** 코어 파이프라인(수식 스캔·길이 보존 mask·commonmark 어댑터·스트리밍 tail·
+**P0 spike 완료, P1(렌더러) 착수.** 코어 파이프라인(수식 스캔·길이 보존 mask·commonmark 어댑터·스트리밍 tail·
 입력 상한·latest-wins worker)과 iOS에서 이식한 fixture 테스트가 있다. Compose·View 렌더러와
 수식·하이라이트·Mermaid 엔진 연동은 P0 spike(수식 엔진 검증) 뒤에 들어간다. Maven Central
 **미발행**.

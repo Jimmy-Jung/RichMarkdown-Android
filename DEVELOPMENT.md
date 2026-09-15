@@ -2,7 +2,7 @@
 
 - 작성자: JunyoungJung
 - 작성일: 2026-09-15 (KST)
-- 상태: 골격 생성 단계(P0 전)
+- 상태: P0 spike 완료(D4 확정), P1 착수
 
 이 문서는 2026-09-15 아키텍처 대화(architecture-dialogue)에서 확정한 결정 세트다. iOS
 [RichMarkdown](https://github.com/Jimmy-Jung/RichMarkdown)의 `DEVELOPMENT.md`에 대응하며,
@@ -63,16 +63,14 @@ LLM 채팅 메시지의 Markdown + GFM 표 + 인라인/블록 LaTeX + 코드 블
 | D2 | 플랫폼 타겟 | confirmed | Android 전용 + 순수 JVM 코어 모듈(`richmarkdown-core`, `@InternalRichMarkdownApi` opt-in) | 목표 Android, iOS는 Swift가 source of truth, WebView·View는 Android 전용, 전환 비용은 D3·D4 의존성이 결정 | D3·D4·D6 후보 전부 열림, 코어 fixture는 JVM 테스트 | 의존성 build.gradle.kts 타겟 실측; iOS §8 |
 | D3 | Markdown 파서 | confirmed | commonmark-java 0.30.0 + `ext-gfm-tables`·`ext-gfm-strikethrough`, `IncludeSourceSpans.BLOCKS_AND_INLINES` | iOS swift-markdown = cmark 계열 → 블록 구조 fixture 일치, spec 스위트, `SourceSpan.inputIndex`. 기각: JetBrains/markdown(계열 불일치·spec 통과율 미확인), vendoring(유지 비용) | 코어 JVM 전용, mask 단위 UTF-16 code unit, D3a | `SourceSpan.java` inputIndex; README Java 11·Android; `InlineParserImpl.java` List.of |
 | D3a | commonmark Android 호환 대응 | confirmed (split-from D3) | ① README·Gradle 안내에 coreLibraryDesugaring 필수 ② 파서 호출 경계에서 `NoSuchMethodError`/`NoClassDefFoundError`를 잡아 원문 fail-open + 로그 ③ upstream PR(List.of 치환) 계획 | `List.of` = API 30, desugar_jdk_libs jdk11 지원, PR #369 선례 | 소비 앱 요건 1개, fail-open 경로 1개. 외부 PR은 별도 승인 후 실행. upstream 머지 시 ①·② 제거 | desugar_jdk_libs `jdk11/.../ImmutableCollections.java`; commonmark `ci.yml` lint only |
-| D4 | 수식 엔진 | **provisional** | RaTeX `io.github.erweixin:ratex-android:0.1.14`. 호출은 `MathRenderService` 한 파일에 격리, 공개 provider API 없음 | `RaTeXEngine.parse()` → `DisplayList(width,height,depth)`, `RaTeXRenderer.draw(canvas)` + `heightPx`/`depthPx` → Compose·View 공용 Bitmap/Canvas(iOS SwiftMath `asImage()`+`LayoutInfo` 동형). latex-renderer는 `LatexExporterState`가 composition에서만 생성. jlatexmath-android는 archived·GPL-2.0 탈락 | 캐시 키 = latex + fontSizePx + color + displayMode, ABI split, `mathFont` 테마 단일(KaTeX), `.so` 크래시 표면 | `platforms/android/src/main/kotlin/io/ratex/*.kt`; RaTeX issues #55·#56·#82 |
+| D4 | 수식 엔진 | confirmed (2026-09-15 P0 spike 통과) | RaTeX `io.github.erweixin:ratex-android:0.1.14`. 호출은 `MathRenderService` 한 파일에 격리, 공개 provider API 없음 | `RaTeXEngine.parse()` → `DisplayList(width,height,depth)`, `RaTeXRenderer.draw(canvas)` + `heightPx`/`depthPx` → Compose·View 공용 Bitmap/Canvas(iOS SwiftMath `asImage()`+`LayoutInfo` 동형). latex-renderer는 `LatexExporterState`가 composition에서만 생성. jlatexmath-android는 archived·GPL-2.0 탈락 | 캐시 키 = latex + fontSizePx + color + displayMode, ABI split, `mathFont` 테마 단일(KaTeX), `.so` 크래시 표면 | `platforms/android/src/main/kotlin/io/ratex/*.kt`; RaTeX issues #55·#56·#82 |
 | D5 | UI 표면 | confirmed | Compose `RichMarkdown()` + 네이티브 `RichMarkdownView`(ViewGroup + TextView/Spannable). 파서·렌더 모델·수식 raster·캐시 공유 | D1 전체 동등, iOS UIKit 채택 사유(SwiftUI 선택·칩 충돌, 셀 재사용 성능 실측) | D4는 Canvas/Bitmap + metrics 출력 엔진만, D7 뷰 2종, 렌더러 작업량 2배 | iOS §5 UIKit 네이티브 렌더러; README UIKit 절 |
 | D6 | 하이라이트 엔진 | confirmed | quickjs-kt 1.0.15 + iOS 동일 Prism 1.30.0 번들·`native-tokenize.js` 공유. 바인딩 호출 한 파일 격리(Zipline·quickjs-wrapper로 교체 가능) | 엔진 동일 → fixture·별칭·역할 매핑 iOS 이식. `prism-core.js` ES5, `document` 없으면 DOM 경로 우회(L1143), 클래식 스크립트 evaluate. JS 문자열 UTF-16 = `NSRange` 동형 | `.so` ×4 ABI(AAR 1.83 MB, 16 KB 정렬 실측 OK), opt-in 모듈 | `prism-core.js` L3-9·L1143·L1207; quickjs-kt AAR 실측 |
 | D7 | Mermaid 경로 | confirmed | Android WebView + iOS 번들(`mermaid.bundle.js`·`index.html`) 공유. `WebViewAssetLoader`, 메시지 브리지, 한계값 iOS 상속 | Mermaid는 DOM 측정 의존 → headless JS 불가. 네이티브 대안 전부 초기 단계. 공식 엔진 유지가 iOS 결정의 핵심 | assets 3.45 MB(모듈 채택 앱만), androidx.webkit 의존, WebView 부재 시 원문 fail-open, Compose는 `AndroidView` 래핑 | iOS `WebAssets/index.html`; Docs §3.3·§3.5·§5.2 |
 | D8 | 저장소·패키징·명칭 | confirmed | 별도 저장소 `Jimmy-Jung/RichMarkdown-Android`(로컬 `/Users/jimmy/Documents/GitHub/RichMarkdown-Android`). Maven `io.github.jimmy-jung:richmarkdown{,-core,-highlight,-mermaid}`. Kotlin 패키지 `io.github.jimmyjung.richmarkdown`. 독립 semver 0.1.0. MIT. 공유 자산은 `scripts/sync-ios-assets.sh`로 복사 + iOS Docs SHA-256 표 대조 | 사용자 경로 지정, 네임스페이스·저장소명 미점유(repo1 404, gh 404) | 자산 복제 + 동기화 스크립트, CI 분리, README에 iOS 계약 버전 대응표 | 디스크 폴더 존재 확인 |
 | D9 | minSdk | confirmed | 24, 전 모듈 동일 | 의존성 최고 floor(androidx.webkit 1.17.0). 배포 분포 자료 없음 → 시장 점유로 정하지 않음. 30 미만 어떤 값도 D3a 요건을 없애지 못함 | Gradle `defaultConfig.minSdk`, 지원 matrix 한 줄, CI 에뮬레이터 API 24 | AAR AndroidManifest 실측 4건 |
 
-D4 확정 조건: P0 spike ①②③ 전부 통과. ① 실패 시 `typefaceLoader`에 시스템 폰트 폴백
-(RaTeX-CMP의 `getPlatformTypeFace(font, codePoint)` 패턴)이 가능한지 검토한 뒤 재제시.
-실패하고 우회도 안 되면 latex-renderer로 돌아와 다시 결정한다.
+D4 확정 근거: §8 P0 spike 결과 ①②③ 전부 통과 (2026-09-15, Pixel_6 에뮬레이터 API 37.1 · 16 KB 페이지).
 
 ## 3. iOS에서 그대로 옮기는 계약 (결정 불필요 — 근거는 "동일 계약")
 
@@ -169,3 +167,24 @@ dependencies {
 
 Definition of Done은 iOS fixture와 같은 입력에서 같은 블록 구조·수식 span·스트리밍 표시를
 내는 것이다. 수치 성능 목표는 P0 실측 뒤에 근거와 함께 추가한다.
+
+## 8. P0 spike 결과 (2026-09-15 실측)
+
+기기: Pixel_6 AVD, android-37.1 `google_apis_ps16k` arm64-v8a, `_SC_PAGESIZE` = 16384. 코드: `richmarkdown/src/androidTest/…/RaTeXSpikeTest.kt`,
+`richmarkdown-highlight/src/androidTest/…/PrismQuickJsAndroidSpikeTest.kt`, `richmarkdown-mermaid/src/androidTest/…/MermaidWebViewSpikeTest.kt`,
+host: `spikes/prism-quickjs`.
+
+| 항목 | 결과 | 판정 |
+|---|---|---|
+| D4 ① `\text{한글}` | GlyphPath 2개, font `CJK-Regular`(RaTeX AAR 내장), typeface 존재. `x` → `x\text{한글}` width 27.4 → 123.4 px, opaque 288 → 1749 | 통과 |
+| D4 ② 지연 | 폰트 19개 로드 8.7 ms, 첫 `parseBlocking` 1.62 ms, `\int_0^1 x^2 dx` ×30 median 0.92 ms / p95 1.17 ms, 48 px draw 1.74 ms | 통과 |
+| D4 ③ 16 KB 정렬 | arm64-v8a·x86_64 `.so` PT_LOAD align 0x4000(ELF 실측), armeabi-v7a 0x1000(32-bit, 요건 대상 아님). 16 KB 기기에서 로드·parse 성공 | 통과 |
+| D4 실패 경로 | `\frac{` → `RaTeXException: parse error …` (catch 가능 → 원문 fail-open 구현 가능) | 통과 |
+| D6 QuickJS | Prism 스크립트 21개 로드 25.4 ms(Android) / 37.6 ms(host), 언어별 토큰화 0.1~0.5 ms, 100,130 UTF-16 unit 80.7 ms, JNI 첫 evaluate 0.3 ms, 한글·이모지 UTF-16 왕복 일치 | 통과 |
+| D7 WebView | `index.html` 로드 644 ms(cold)/170~190 ms(warm), `renderDiagram` cold 69 ms / warm 27 ms, width 360·height 310, 잘못된 원문은 reject, dark 테마 OK | 통과 |
+| D3a API 24 desugaring | API 24 시스템 이미지 미설치 — P1 데모 앱에서 검증 예정 | 보류 |
+
+구현 규칙로 승격된 발견:
+- quickjs-kt `evaluate`는 스크립트 완료값을 Kotlin으로 변환한다. Prism 파일의 완료값은 순환 참조 객체라 `TypeError: circular reference`가 난다 → 번들 로드 시 각 스크립트 끝에 `\n;undefined;\n`을 붙인다.
+- 창에 붙지 않은 WebView는 `requestAnimationFrame`이 멈춰 `renderDiagram`이 끝나지 않는다 → Mermaid 뷰는 attach 이후에만 렌더를 시작한다 (iOS §3.5 "window 안에서만 로드" 규칙과 동일).
+- RaTeX가 요구하는 폰트 id에 `CJK-Regular`가 포함되며 AAR assets에 들어 있다. `typefaceLoader`는 `RaTeXFontLoader.getTypeface`를 그대로 쓴다.

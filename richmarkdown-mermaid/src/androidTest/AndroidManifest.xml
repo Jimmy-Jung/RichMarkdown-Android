@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Author: JunyoungJung -->
+<!-- Date: 2026-09-15 -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- spike 전용 호스트 Activity. 창에 붙지 않은 WebView는 requestAnimationFrame이 발화하지 않는다. -->
+        <activity
+            android:name="io.github.jimmyjung.richmarkdown.mermaid.spike.SpikeHostActivity"
+            android:exported="false" />
+    </application>
+</manifest>
