@@ -7,6 +7,7 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
     `java-library`
+    alias(libs.plugins.maven.publish)
 }
 
 group = providers.gradleProperty("GROUP").get()
@@ -42,4 +43,11 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+// Maven Central 발행 (D8). 좌표 io.github.jimmy-jung:<POM_ARTIFACT_ID>:<VERSION_NAME>.
+// 실제 발행은 `./gradlew publishToMavenCentral -PRELEASE_SIGNING_ENABLED=true` — 자격 증명·서명 키는 로컬 ~/.gradle/gradle.properties.
+mavenPublishing {
+    publishToMavenCentral()
+    if (providers.gradleProperty("RELEASE_SIGNING_ENABLED").orNull == "true") signAllPublications()
 }

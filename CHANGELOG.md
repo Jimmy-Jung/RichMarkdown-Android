@@ -41,6 +41,15 @@ semver다. `0.x`에서는 minor 버전에서도 공개 API가 바뀔 수 있다.
 - P1: `richmarkdown-highlight` `PrismHighlighter`(QuickJS, iOS 번들 공유, 역할 7종), `richmarkdown-mermaid`
   `MermaidDiagramRenderer`(WebViewAssetLoader, attach 후 렌더, fail-open). instrumented 테스트 통과.
 
+- P2: `demo` 앱(쇼케이스 Compose/View 토글, AI 챗봇 Compose·RecyclerView, SSE 실시간 렌더링), README 스크린샷·SSE GIF,
+  `scripts/capture-demo-screens.sh`. API 24 에뮬레이터에서 coreLibraryDesugaring 동작 실측(D3a).
+- 발행 설정: `com.vanniktech.maven.publish` 0.37.0, 좌표 `io.github.jimmy-jung:richmarkdown{,-core,-highlight,-mermaid}`,
+  POM 메타데이터(MIT). `publishToMavenLocal` 검증. Central 발행은 자격 증명·서명 키 준비 후.
+
+### Fixed
+
+- View 렌더러 표 셀 높이가 행에 맞지 않아 테두리가 어긋나던 결함.
+
 ### Not yet
 
-- 데모 앱, API 24 desugaring 실측, Maven Central 발행.
+- Maven Central 실제 발행(사용자 승인), commonmark-java upstream PR(D3a ③).

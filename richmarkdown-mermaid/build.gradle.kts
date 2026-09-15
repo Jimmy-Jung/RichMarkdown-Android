@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.android.library)
     // RichMarkdownDiagramRendering.Content가 @Composable이다 (AndroidView 래핑).
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.maven.publish)
 }
 
 group = providers.gradleProperty("GROUP").get()
@@ -49,4 +50,11 @@ dependencies {
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.kotlin.test)
+}
+
+// Maven Central 발행 (D8). 좌표 io.github.jimmy-jung:<POM_ARTIFACT_ID>:<VERSION_NAME>.
+// 실제 발행은 `./gradlew publishToMavenCentral -PRELEASE_SIGNING_ENABLED=true` — 자격 증명·서명 키는 로컬 ~/.gradle/gradle.properties.
+mavenPublishing {
+    publishToMavenCentral()
+    if (providers.gradleProperty("RELEASE_SIGNING_ENABLED").orNull == "true") signAllPublications()
 }

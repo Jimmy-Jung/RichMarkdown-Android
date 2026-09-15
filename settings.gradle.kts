@@ -16,7 +16,8 @@ pluginManagement {
 }
 
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    // PREFER_SETTINGS: maven.publish 플러그인이 MavenLocal을 프로젝트 저장소로 추가한다(FAIL_ON_PROJECT_REPOS면 실패, 실측).
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
         google()
         mavenCentral()

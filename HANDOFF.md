@@ -6,7 +6,7 @@
 
 ## 현재 지점
 
-- 커밋: P1 전부 + P2 데모 앱·스크린샷 반영. 남은 P2: API 24 desugaring 실측, README 사용법, Maven 발행 설정, upstream PR 준비.
+- 커밋: P1·P2(데모·스크린샷·API 24 실측·발행 설정) 반영. 남은 항목: Maven Central 실제 발행(사용자 승인), upstream PR 자료.
 - 설계 정본: `DEVELOPMENT.md`(결정 D0~D9·D3a, §8 P0 결과). API 계약: `docs/P1-CONTRACTS.md`.
 - 에뮬레이터: AVD `Pixel_6`(android-37.1, 16 KB 페이지). API 24 이미지 `system-images;android-24;google_apis;arm64-v8a` 설치 진행/완료 여부는 `sdkmanager --list_installed`로 확인.
 
@@ -40,11 +40,12 @@ export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:+$JAVA_TOOL_OPTIONS }-Djava.io.tmp
 
 ### P2 — 데모앱·검증·발행
 - [x] `demo` 모듈(`com.android.application`, coreLibraryDesugaring ON): Compose 채팅 화면, View(RecyclerView) 채팅 화면, SSE 스트리밍 데모(iOS `Examples/RichMarkdownDemo` 대응), 코드 블록 확장 토글 — Pixel_6 설치·동작 확인
-- [ ] API 24 에뮬레이터에서 데모 실행 → commonmark `List.of` desugaring 확인(D3a)
+- [x] API 24 에뮬레이터에서 데모 실행 → commonmark `List.of` desugaring 확인(D3a) — `API24_Pixel6`, 크래시 0
 - [x] `README.md` 스크린샷·SSE GIF 첨부 (`scripts/capture-demo-screens.sh`)
-- [ ] `README.md` 사용법(실제 API) 보강, `THIRD_PARTY_NOTICES.md` 점검(okhttp 추가)
-- [ ] Maven Central 발행 설정(`maven-publish` + signing; 자격 증명은 `~/.gradle/gradle.properties`에만) — 실제 발행은 사용자 승인 후
-- [ ] upstream PR 준비: commonmark-java `List.of` → Android 호환 치환(D3a ③)
+- [x] `README.md` 사용법(실제 API) 보강, `THIRD_PARTY_NOTICES.md` 점검(okhttp 추가)
+- [x] Maven Central 발행 설정(vanniktech maven.publish 0.37.0, POM_* in gradle.properties, `publishToMavenLocal` 검증)
+- [ ] Maven Central 실제 발행 — 사용자 승인 + `~/.gradle/gradle.properties`에 mavenCentralUsername/Password·signingInMemoryKey/Password 설정 후 `./gradlew publishToMavenCentral -PRELEASE_SIGNING_ENABLED=true`
+- [x] upstream PR 자료: `docs/upstream-commonmark-android-compat.md` (제출은 사용자 승인 후)
 
 ## 위임 규칙 (cc2)
 

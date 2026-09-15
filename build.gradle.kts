@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.kotlin.jvm) apply false
     alias(libs.plugins.kotlin.compose) apply false
+    alias(libs.plugins.maven.publish) apply false
 }
 
 // 빌드 산출물을 저장소 밖으로 보낸다.

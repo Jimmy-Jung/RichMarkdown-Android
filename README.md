@@ -83,6 +83,73 @@ dependencies {
 
 이 요건은 upstream에 `List.of` 치환 PR이 머지되면 제거한다(DEVELOPMENT.md D3a).
 
+## 사용법
+
+### Compose
+
+```kotlin
+import io.github.jimmyjung.richmarkdown.RichMarkdown
+
+@Composable
+fun MessageBubble(markdown: String) {
+    RichMarkdown(markdown = markdown)
+}
+```
+
+| 파라미터 | 설명 |
+|---|---|
+| `dollarMath` | `LatexDollarMathOptions.None`(기본) / `Single`(`$…$`, `$$…$$` 블록) / `Single + InlineDouble`(문장 안 `$$…$$`) |
+| `theme` | `RichMarkdownTheme` — 요소별 색 8종 + 폰트 7종 + `syntax` 역할 색 7종. 값 타입이라 렌더 요청 key에 들어간다 |
+| `streaming` | `RichMarkdownStreamingOptions?` — 스트리밍 중인 메시지에만 건다. 끝나면 `null` |
+| `codeBlocks` | `RichMarkdownCodeBlockOptions(highlighter, diagram)` — opt-in 모듈 주입. 기본 `None` |
+| `isDarkTheme` | 기본 `isSystemInDarkTheme()` |
+| `onOpenLink` | `null`이면 `LocalUriHandler`. 허용 scheme은 `https`·`http`·`mailto`만 |
+
+메시지 목록의 세로 스크롤·virtualization은 소비 앱 몫이다(`LazyColumn`). 뷰는 주어진 폭을 채우므로
+넓은 화면에서는 소비 앱이 읽기 폭(예: 720dp)을 제한한다 — `demo/`의 `ShowcaseActivity` 참고.
+
+### View
+
+```kotlin
+val view = RichMarkdownView(context).apply {
+    markdown = message          // setter가 입력 상한(256 KiB)을 적용한다
+    dollarMath = LatexDollarMathOptions.Single
+    onContentSizeChange = { /* RecyclerView 셀 self-sizing 재측정 */ }
+}
+```
+
+`RichMarkdownView`는 Compose를 감싼 래퍼가 아니라 `LinearLayout` + `TextView`/`Spannable` 렌더러다.
+파서·수식 raster·캐시는 Compose 렌더러와 공유한다. RecyclerView에서는 셀마다 뷰를 두고 `markdown`만 바꾼다
+(`demo/`의 `ViewChatActivity`).
+
+### 스트리밍
+
+```kotlin
+val buffer = RichMarkdownStreamingTextBuffer(scope)   // 100 ms latest-wins, trailing 게시
+sseFlow.collect { chunk -> buffer.append(chunk) }      // 또는 buffer.submit(누적 전체 문자열)
+
+val text by buffer.text.collectAsState()
+RichMarkdown(markdown = text, streaming = if (isStreaming) RichMarkdownStreamingOptions.Default else null)
+```
+
+렌더러는 항상 **누적 전체 문자열**을 받는다. 스트리밍 append(이전 문자열이 새 문자열의 prefix)는 이전 렌더를
+유지한 채 새 블록만 붙는다. `RichMarkdownStreamingOptions`는 마지막 문단 끝 12 grapheme 페이드와
+미닫힘 `**`·백틱·`\(`(·`$`) opener 숨김을 켠다 — 파싱 결과는 바꾸지 않는다.
+
+### 코드 블록 확장 (opt-in)
+
+```kotlin
+val codeBlocks = RichMarkdownCodeBlockOptions(
+    highlighter = PrismHighlighter.shared(context),   // richmarkdown-highlight
+    diagram = MermaidDiagramRenderer.shared,          // richmarkdown-mermaid
+)
+RichMarkdown(markdown = message, codeBlocks = codeBlocks)
+```
+
+하이라이터는 iOS와 같은 Prism 1.30.0 문법 18종을 QuickJS에서 실행하고 역할 7종(`theme.syntax`)으로 색을 입힌다.
+미지원 언어·실패는 plain 코드 블록으로 되돌린다. ` ```mermaid ` 블록은 공식 Mermaid 11.17.2를 WebView에서
+그린다 — 원문 20,000바이트·edge 200·높이 4,000dp 한계와 실패 시 "오류 한 줄 + 원문" 표시는 iOS와 같다.
+
 ## 지원 matrix
 
 | 항목 | 값 |

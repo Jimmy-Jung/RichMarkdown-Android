@@ -2,7 +2,7 @@
 
 - 작성자: JunyoungJung
 - 작성일: 2026-09-15 (KST)
-- 상태: P1 렌더러 구현 완료(컴파일·instrumented 통과), P2 데모·검증 진행
+- 상태: P1 렌더러·P2 데모 앱 완료, API 24 desugaring 실측 통과. Maven Central 발행 설정 완료(실제 발행은 사용자 승인 대기)
 
 이 문서는 2026-09-15 아키텍처 대화(architecture-dialogue)에서 확정한 결정 세트다. iOS
 [RichMarkdown](https://github.com/Jimmy-Jung/RichMarkdown)의 `DEVELOPMENT.md`에 대응하며,
@@ -182,7 +182,7 @@ host: `spikes/prism-quickjs`.
 | D4 실패 경로 | `\frac{` → `RaTeXException: parse error …` (catch 가능 → 원문 fail-open 구현 가능) | 통과 |
 | D6 QuickJS | Prism 스크립트 21개 로드 25.4 ms(Android) / 37.6 ms(host), 언어별 토큰화 0.1~0.5 ms, 100,130 UTF-16 unit 80.7 ms, JNI 첫 evaluate 0.3 ms, 한글·이모지 UTF-16 왕복 일치 | 통과 |
 | D7 WebView | `index.html` 로드 644 ms(cold)/170~190 ms(warm), `renderDiagram` cold 69 ms / warm 27 ms, width 360·height 310, 잘못된 원문은 reject, dark 테마 OK | 통과 |
-| D3a API 24 desugaring | API 24 시스템 이미지 미설치 — P1 데모 앱에서 검증 예정 | 보류 |
+| D3a API 24 desugaring | `API24_Pixel6` AVD(android-24 google_apis arm64)에 데모 설치·실행. `coreLibraryDesugaring` 켠 앱에서 파싱·수식·하이라이트·표 정상 렌더, `NoSuchMethodError`·크래시 0 (2026-09-15 21:20) | 통과 |
 
 구현 규칙로 승격된 발견:
 - quickjs-kt `evaluate`는 스크립트 완료값을 Kotlin으로 변환한다. Prism 파일의 완료값은 순환 참조 객체라 `TypeError: circular reference`가 난다 → 번들 로드 시 각 스크립트 끝에 `\n;undefined;\n`을 붙인다.

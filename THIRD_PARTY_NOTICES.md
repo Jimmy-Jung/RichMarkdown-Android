@@ -16,6 +16,7 @@
 | Mermaid | 11.17.2 | MIT | `richmarkdown-mermaid/src/main/assets/mermaid/mermaid.bundle.js` 번들 복사. 번들에 포함된 64개 패키지 고지는 같은 폴더의 `MERMAID-THIRD-PARTY-NOTICES.txt` | https://github.com/mermaid-js/mermaid |
 | AndroidX (Compose, core-ktx, webkit, activity) | `gradle/libs.versions.toml` 참조 | Apache-2.0 | Maven 의존성 | https://github.com/androidx/androidx |
 | kotlinx.coroutines | 1.11.0 | Apache-2.0 | Maven 의존성 | https://github.com/Kotlin/kotlinx.coroutines |
+| OkHttp | 5.5.0 | Apache-2.0 | Maven 의존성 (`demo`만 — SSE 클라이언트. 라이브러리 모듈은 의존하지 않음) | https://github.com/square/okhttp |
 | Kotlin 표준 라이브러리 | 2.4.20 | Apache-2.0 | Maven 의존성 | https://github.com/JetBrains/kotlin |
 | JUnit Jupiter | 6.1.3 | 미확인 (테스트 전용, 배포 아티팩트에 포함되지 않음) | 테스트 의존성 | https://github.com/junit-team/junit-framework |
 

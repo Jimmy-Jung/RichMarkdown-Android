@@ -83,3 +83,5 @@ android-library = { id = "com.android.library", version.ref = "agp" }
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+# Maven Central 발행 (Central Portal). 2026-09-15 plugins.gradle.org 최신 stable 0.37.0.
+maven-publish = { id = "com.vanniktech.maven.publish", version = "0.37.0" }
