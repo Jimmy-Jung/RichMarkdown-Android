@@ -6,6 +6,8 @@
 
 plugins {
     alias(libs.plugins.android.library)
+    // RichMarkdownDiagramRendering.Content가 @Composable이다 (AndroidView 래핑).
+    alias(libs.plugins.kotlin.compose)
 }
 
 group = providers.gradleProperty("GROUP").get()
@@ -25,6 +27,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    buildFeatures {
+        compose = true
+    }
 }
 
 dependencies {
@@ -33,7 +39,11 @@ dependencies {
     implementation(libs.androidx.webkit)
     implementation(libs.kotlinx.coroutines.android)
 
-    // P0 spike instrumented 테스트 (MermaidWebViewSpikeTest). 에뮬레이터에서 connectedDebugAndroidTest로 실행한다.
+    implementation(platform(libs.compose.bom))
+    implementation(libs.compose.ui)
+    implementation(libs.compose.foundation)
+
+    // instrumented 테스트: P0 spike(MermaidWebViewSpikeTest) + MermaidDiagramViewTest. 에뮬레이터에서 connectedDebugAndroidTest로 실행한다.
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.core)
