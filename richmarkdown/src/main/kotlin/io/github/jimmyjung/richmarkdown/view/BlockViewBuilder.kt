@@ -521,7 +521,16 @@ internal class BlockViewBuilder(
             }
         }
         val tableLayout = TableLayout(context).apply {
-            cells.forEach { row -> addView(TableRow(context).apply { row.forEach { cell -> addView(cell) } }) }
+            cells.forEach { row ->
+                addView(
+                    TableRow(context).apply {
+                        // 셀 높이를 행에 맞춘다 — 수식이 든 셀과 텍스트 셀의 높이가 달라 테두리가 어긋나던 결함(데모 실측).
+                        row.forEach { cell ->
+                            addView(cell, TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT, TableRow.LayoutParams.MATCH_PARENT))
+                        }
+                    },
+                )
+            }
             accessibilityDelegate = object : View.AccessibilityDelegate() {
                 @Suppress("DEPRECATION")
                 override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfo) {
@@ -546,7 +555,7 @@ internal class BlockViewBuilder(
         borderColor: Int,
     ): ChipTextView = textView().apply {
         configure(this, if (rowIndex == 0) runs.map { it.copy(bold = true) } else runs, images, bodyPx, bodyTypeface, null)
-        gravity = when (alignment) {
+        gravity = Gravity.CENTER_VERTICAL or when (alignment) {
             ParsedTable.ColumnAlignment.Center -> Gravity.CENTER_HORIZONTAL
             ParsedTable.ColumnAlignment.Right -> Gravity.END
             ParsedTable.ColumnAlignment.Left, null -> Gravity.START

@@ -24,10 +24,30 @@ WebView 없이 네이티브로 렌더한다. Jetpack Compose는 `RichMarkdown()`
 
 ## 현재 상태
 
-**P0 spike 완료, P1(렌더러) 착수.** 코어 파이프라인(수식 스캔·길이 보존 mask·commonmark 어댑터·스트리밍 tail·
+**P1 렌더러·확장 모듈 구현 완료, 데모 앱 동작.** Maven Central 미발행(P2 진행). 코어 파이프라인(수식 스캔·길이 보존 mask·commonmark 어댑터·스트리밍 tail·
 입력 상한·latest-wins worker)과 iOS에서 이식한 fixture 테스트가 있다. Compose·View 렌더러와
 수식·하이라이트·Mermaid 엔진 연동은 P0 spike(수식 엔진 검증) 뒤에 들어간다. Maven Central
 **미발행**.
+
+## 스크린샷
+
+`demo/` 앱의 실제 화면. Pixel 6 AVD(Android 16, API 37.1, 16 KB 페이지)에서 `scripts/capture-demo-screens.sh`로 찍었다.
+같은 스크립트가 정지컷 4장과 SSE 스트리밍 GIF를 다시 만든다 (`./gradlew :demo:installDebug` 뒤 실행).
+
+| 쇼케이스 · Compose 렌더러 | 쇼케이스 · View 렌더러 |
+|---|---|
+| ![Compose 렌더러: 인라인·블록 수식, 코드 하이라이팅](docs/screenshots/01-showcase-compose.png) | ![View 렌더러: 같은 문서를 RichMarkdownView로](docs/screenshots/02-showcase-view.png) |
+| 한글 문장 안에 baseline 정렬된 `\( A = \pi r^2 \)`, 가로 스크롤·복사 버튼이 붙은 블록 수식, Prism 하이라이팅이 적용된 Kotlin 코드 블록 | 같은 샘플을 `RichMarkdownView`(TextView·Spannable)로 렌더. 인라인 수식 `ReplacementSpan`의 ascent/descent가 글줄 baseline에 맞는다 |
+
+| AI 챗봇 · Compose (`LazyColumn`) | AI 챗봇 · View (`RecyclerView`) |
+|---|---|
+| ![Compose 채팅 버블 안의 표·코드·목록·인용](docs/screenshots/03-chat-compose.png) | ![RecyclerView 셀 안의 RichMarkdownView](docs/screenshots/04-chat-view.png) |
+| 셀 안 수식이 든 GFM 표, 코드 블록 헤더(언어 라벨·복사), 번호 목록의 인라인 분수, 왼쪽 바 인용 | RecyclerView 셀마다 `RichMarkdownView`를 두고 `markdown`만 바꾼다. 표 셀 높이가 행에 맞춰 테두리가 이어진다 |
+
+| SSE 실시간 렌더링 |
+|---|
+| ![SSE 프레임이 도착하는 대로 렌더되는 스트리밍 데모](docs/screenshots/05-sse-streaming.gif) |
+| `text/event-stream` 조각을 `RichMarkdownStreamingTextBuffer`(100 ms latest-wins)로 합쳐 누적 문자열을 넘긴다. 마지막 문단 끝 12 grapheme이 옅어지고, 아직 닫히지 않은 `\(`·`**`·백틱 opener는 closer가 올 때까지 숨긴다. 스트리밍 append는 이전 렌더를 유지해 원문으로 되돌아가는 플래시가 없다 |
 
 ## 설치 (예정)
 

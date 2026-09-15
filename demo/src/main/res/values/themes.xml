@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Author: JunyoungJung -->
+<!-- Date: 2026-09-15 -->
+<resources>
+    <!-- View 화면(ViewChatActivity)이 AppCompatActivity라 AppCompat 계열이 필요하다. Compose 화면도 같은 테마를 쓴다. -->
+    <style name="Theme.RichMarkdownDemo" parent="Theme.AppCompat.DayNight.NoActionBar" />
+</resources>

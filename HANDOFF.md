@@ -6,7 +6,7 @@
 
 ## 현재 지점
 
-- 커밋: P1 전부(공유 모델·Compose·View·Prism·Mermaid) 반영. P2 데모 앱 진행 중(미커밋 `demo/` 가능 — `git status` 확인).
+- 커밋: P1 전부 + P2 데모 앱·스크린샷 반영. 남은 P2: API 24 desugaring 실측, README 사용법, Maven 발행 설정, upstream PR 준비.
 - 설계 정본: `DEVELOPMENT.md`(결정 D0~D9·D3a, §8 P0 결과). API 계약: `docs/P1-CONTRACTS.md`.
 - 에뮬레이터: AVD `Pixel_6`(android-37.1, 16 KB 페이지). API 24 이미지 `system-images;android-24;google_apis;arm64-v8a` 설치 진행/완료 여부는 `sdkmanager --list_installed`로 확인.
 
@@ -35,13 +35,14 @@ export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:+$JAVA_TOOL_OPTIONS }-Djava.io.tmp
 - [x] `richmarkdown-highlight`: `PrismHighlighter` + instrumented 테스트 13/13
 - [x] `richmarkdown-mermaid`: `MermaidWebRenderer`·`MermaidDiagramView`·`MermaidDiagramRenderer` + 테스트
 - [x] 통합 빌드: `:richmarkdown-core:test`, `assembleDebug`, 3모듈 `connectedDebugAndroidTest` 전부 green (2026-09-15 18:40)
-- [ ] 에뮬레이터 스크린샷으로 인라인 수식 baseline·칩·표·스트리밍 확인 (Compose·View 각각)
+- [x] 에뮬레이터 스크린샷으로 인라인 수식 baseline·칩·표·스트리밍 확인 (Compose·View 각각) — `docs/screenshots/`, View 표 셀 높이 결함 수정
 - [ ] `DEVELOPMENT.md` §7 게이트·`CHANGELOG.md` 갱신, 커밋·push
 
 ### P2 — 데모앱·검증·발행
-- [ ] `demo` 모듈(`com.android.application`, coreLibraryDesugaring ON): Compose 채팅 화면, View(RecyclerView) 채팅 화면, SSE 스트리밍 데모(iOS `Examples/RichMarkdownDemo` 대응), 코드 블록 확장 토글
+- [x] `demo` 모듈(`com.android.application`, coreLibraryDesugaring ON): Compose 채팅 화면, View(RecyclerView) 채팅 화면, SSE 스트리밍 데모(iOS `Examples/RichMarkdownDemo` 대응), 코드 블록 확장 토글 — Pixel_6 설치·동작 확인
 - [ ] API 24 에뮬레이터에서 데모 실행 → commonmark `List.of` desugaring 확인(D3a)
-- [ ] `README.md` 사용법·스크린샷, `THIRD_PARTY_NOTICES.md` 점검
+- [x] `README.md` 스크린샷·SSE GIF 첨부 (`scripts/capture-demo-screens.sh`)
+- [ ] `README.md` 사용법(실제 API) 보강, `THIRD_PARTY_NOTICES.md` 점검(okhttp 추가)
 - [ ] Maven Central 발행 설정(`maven-publish` + signing; 자격 증명은 `~/.gradle/gradle.properties`에만) — 실제 발행은 사용자 승인 후
 - [ ] upstream PR 준비: commonmark-java `List.of` → Android 호환 치환(D3a ③)
 

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Author: JunyoungJung -->
+<!-- Date: 2026-09-15 -->
+<resources>
+    <string name="app_name">RichMarkdown Demo</string>
+    <string name="title_showcase">샘플 쇼케이스</string>
+    <string name="title_compose_chat">AI 챗봇 (Compose)</string>
+    <string name="title_view_chat">AI 챗봇 (View · RecyclerView)</string>
+    <string name="title_sse">SSE 실시간 렌더링</string>
+    <string name="action_replay">재생</string>
+    <string name="action_stop">중지</string>
+</resources>
