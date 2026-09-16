@@ -56,6 +56,7 @@ class ViewChatActivity : AppCompatActivity() {
     private lateinit var adapter: ChatAdapter
     private lateinit var recycler: RecyclerView
     private var replayJob: Job? = null
+    private var replayRunID = 0
     private var replayText: String? = null
     private var isStreaming = false
     private var parsesDollarMath = false
@@ -71,6 +72,10 @@ class ViewChatActivity : AppCompatActivity() {
             if (isStreaming) recycler.scrollToPosition(adapter.itemCount - 1)
         }
         setContentView(buildLayout())
+        androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !window.decorView.isNight()
+            isAppearanceLightNavigationBars = !window.decorView.isNight()
+        }
         lifecycleScope.launch {
             buffer.text.collect { text ->
                 if (replayText != null) {
@@ -100,7 +105,7 @@ class ViewChatActivity : AppCompatActivity() {
             setTitleTextColor(if (isNight()) 0xFFFFFFFF.toInt() else 0xFF000000.toInt())
             navigationIcon = DrawerArrowDrawable(context).apply {
                 progress = 1f
-                color = if (root.isNight()) 0xFF0A84FF.toInt() else 0xFF007AFF.toInt()
+                color = if (root.isNight()) 0xFFFFFFFF.toInt() else 0xFF000000.toInt()
             }
             navigationContentDescription = "뒤로 가기"
             setNavigationOnClickListener { finish() }
@@ -144,7 +149,7 @@ class ViewChatActivity : AppCompatActivity() {
             setPadding(dp(16), dp(20), dp(16), dp(20))
         }
         // iOS `DemoLayout.readableWidth` 720pt: 넓은 화면에서는 폭을 멈추고 가운데 둔다.
-        val readableWidth = minOf(resources.displayMetrics.widthPixels, dp(720))
+        val readableWidth = minOf(resources.displayMetrics.widthPixels, dp(752))
         root.addView(
             FrameLayout(this).apply {
                 addView(
@@ -171,6 +176,9 @@ class ViewChatActivity : AppCompatActivity() {
     }
 
     private fun replay() {
+        // 첫 화면은 위에서 시작하되, 긴 스트리밍 버블은 아래쪽 끝을 기준으로 늘어나게 한다.
+        (recycler.layoutManager as LinearLayoutManager).stackFromEnd = true
+        val run = ++replayRunID
         replayJob?.cancel()
         replayJob = lifecycleScope.launch {
             buffer.reset()
@@ -184,8 +192,10 @@ class ViewChatActivity : AppCompatActivity() {
                 }
                 buffer.flush()
             } finally {
-                isStreaming = false
-                publish()
+                if (run == replayRunID) {
+                    isStreaming = false
+                    publish()
+                }
             }
         }
     }
@@ -250,6 +260,7 @@ private class UserHolder(context: Context) : RecyclerView.ViewHolder(
     },
 ) {
     private val text = TextView(context).apply {
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
         val d = resources.displayMetrics.density
         setPadding((14 * d).toInt(), (10 * d).toInt(), (14 * d).toInt(), (10 * d).toInt())
         background = bubble(if (isNight()) 0x260A84FF else 0x26007AFF)

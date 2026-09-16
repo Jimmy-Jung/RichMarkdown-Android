@@ -8,25 +8,21 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 
-/** 루트 목록. iOS `RichMarkdownDemoApp` 루트 `List` 대응 — 각 데모 화면으로 들어가는 버튼만 둔다. */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,36 +30,44 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private data class Entry(val titleRes: Int, val description: String, val activity: Class<out Activity>)
-
+private data class Entry(val title: String, val activity: Class<out Activity>, val codeExtensions: Boolean = false)
 private val entries = listOf(
-    Entry(R.string.title_showcase, "샘플 전부 · Compose/View 전환 · \$ 수식·다크·코드 확장 토글", ShowcaseActivity::class.java),
-    Entry(R.string.title_compose_chat, "LazyColumn 버블 + 스트리밍 재생", ComposeChatActivity::class.java),
-    Entry(R.string.title_view_chat, "RecyclerView 셀의 RichMarkdownView + 스트리밍 재생", ViewChatActivity::class.java),
-    Entry(R.string.title_sse, "text/event-stream 디코더 · 로컬 시뮬레이션 또는 https 엔드포인트", SseStreamingActivity::class.java),
+    Entry("AI 챗봇 (Compose)", ComposeChatActivity::class.java),
+    Entry("AI 챗봇 (View)", ViewChatActivity::class.java),
+    Entry("SSE 실시간 렌더링 (Compose)", SseStreamingActivity::class.java),
+    Entry("코드 블록 확장 (Mermaid · Prism)", ShowcaseActivity::class.java, codeExtensions = true),
+    Entry("샘플 쇼케이스 (Compose · View)", ShowcaseActivity::class.java),
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun Home() {
     val context = LocalContext.current
-    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.app_name)) }) }) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .widthIn(max = ReadableWidth)
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+    Box(Modifier.fillMaxSize().safeDrawingPadding(), contentAlignment = Alignment.TopCenter) {
+        LazyColumn(
+            Modifier.widthIn(max = ReadableWidth + 32.dp).fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
-            entries.forEach { entry ->
-                Button(
-                    onClick = { context.startActivity(Intent(context, entry.activity)) },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(stringResource(entry.titleRes), style = MaterialTheme.typography.titleMedium)
-                        Text(entry.description, style = MaterialTheme.typography.bodySmall)
+            item {
+                Text(stringResource(R.string.app_name), Modifier.semantics { heading() }, style = MaterialTheme.typography.headlineLarge)
+            }
+            item {
+                Surface(shape = RoundedCornerShape(12.dp)) {
+                    Column {
+                        entries.forEachIndexed { index, entry ->
+                            Row(
+                                Modifier.fillMaxWidth().clickable(role = Role.Button) {
+                                    context.startActivity(Intent(context, entry.activity).apply {
+                                        if (entry.codeExtensions) putExtra(ShowcaseActivity.EXTRA_SECTION, "code")
+                                    })
+                                }.padding(horizontal = 16.dp, vertical = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(entry.title, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                                Icon(DemoChevron, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            if (index < entries.lastIndex) HorizontalDivider(Modifier.padding(start = 16.dp))
+                        }
                     }
                 }
             }

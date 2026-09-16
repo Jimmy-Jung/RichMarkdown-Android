@@ -11,7 +11,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
@@ -20,15 +23,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -59,7 +63,7 @@ const val REPLAY_QUESTION = "정규분포의 전체 넓이가 1인 이유를 설
  * Compose 채팅 (iOS `ChatDemoView`). 답변 버블마다 [RichMarkdown]을 넣고, `재생`은 fixture를 50ms 간격으로
  * [RichMarkdownStreamingTextBuffer]에 흘려 마지막 버블을 스트리밍 표시한다.
  *
- * `reverseLayout = true`: index 0이 화면 아래다. 스트리밍 버블이 자라도 리스트가 바닥에 붙어 있다.
+ * 첫 질문부터 읽고, 재생할 때만 마지막 답변으로 이동한다.
  * intent extra `autoplay=true`면 진입 즉시 재생한다.
  */
 class ComposeChatActivity : ComponentActivity() {
@@ -85,6 +89,7 @@ private fun ComposeChat(autoplay: Boolean) {
     var isStreaming by remember { mutableStateOf(false) }
     var replayJob by remember { mutableStateOf<Job?>(null) }
     var parsesDollarMath by rememberSaveable { mutableStateOf(false) }
+    var showsCaseLabels by rememberSaveable { mutableStateOf(true) }
     val codeBlocks = remember { demoCodeBlocks(context) }
     val dollarMath = if (parsesDollarMath) LatexDollarMathOptions.Single else LatexDollarMathOptions.None
 
@@ -92,8 +97,6 @@ private fun ComposeChat(autoplay: Boolean) {
         replayJob?.cancel()
         replayStarted = true
         replayJob = scope.launch {
-            // LazyColumn은 앞에 끼워 넣은 항목 앞에서 기존 첫 항목을 고정한다(key 앵커). 새 바닥(index 0)으로 명시적으로 옮긴다.
-            listState.scrollToItem(0)
             buffer.reset()
             isStreaming = true
             try {
@@ -109,52 +112,69 @@ private fun ComposeChat(autoplay: Boolean) {
     }
 
     LaunchedEffect(autoplay) { if (autoplay) replay() }
+    val replayAnswerHeight by remember {
+        derivedStateOf { listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == "replay-answer" }?.size }
+    }
+    LaunchedEffect(replayText, replayStarted) {
+        if (replayStarted) listState.scrollToItem(SampleMarkdown.conversation.size + 2)
+    }
+    LaunchedEffect(replayAnswerHeight) {
+        if (isStreaming) listState.scrollToItem(SampleMarkdown.conversation.size + 2)
+    }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.title_compose_chat)) },
+            DemoTopAppBar(
+                title = "AI 챗봇",
                 actions = {
-                    FilterChip(parsesDollarMath, { parsesDollarMath = !parsesDollarMath }, label = { Text("$ 수식") })
-                    Button(onClick = ::replay, modifier = Modifier.padding(horizontal = 8.dp)) {
+                    TextButton(
+                        onClick = ::replay,
+                        enabled = !isStreaming,
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.onBackground,
+                        ),
+                    ) {
                         Text(stringResource(R.string.action_replay))
+                    }
+                    DemoOptionsMenu {
+                        DemoToggleOption("$ 수식 파싱 (opt-in)", parsesDollarMath) { parsesDollarMath = !parsesDollarMath }
+                        DemoToggleOption("케이스 라벨 표시", showsCaseLabels) { showsCaseLabels = !showsCaseLabels }
                     }
                 },
             )
         },
     ) { padding ->
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .padding(padding)
-                .widthIn(max = ReadableWidth)
-                .fillMaxWidth(),
-            reverseLayout = true,
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            if (replayStarted) {
-                item(key = "replay-answer") {
-                    AssistantBubble(
-                        caseName = "스트리밍 재생",
-                        markdown = replayText,
-                        dollarMath = dollarMath,
-                        codeBlocks = codeBlocks,
-                        streaming = if (isStreaming) RichMarkdownStreamingOptions.Default else null,
-                    )
+        Box(Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.widthIn(max = ReadableWidth + 32.dp).fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                items(SampleMarkdown.conversation, key = { it.id }) { message ->
+                    when (message.role) {
+                        ChatMessage.Role.User -> UserBubble(message.text)
+                        ChatMessage.Role.Assistant -> AssistantBubble(
+                            caseName = if (showsCaseLabels) message.caseName else "",
+                            markdown = message.text,
+                            dollarMath = dollarMath,
+                            codeBlocks = codeBlocks,
+                            streaming = null,
+                        )
+                    }
                 }
-                item(key = "replay-question") { UserBubble(REPLAY_QUESTION) }
-            }
-            items(SampleMarkdown.conversation.asReversed(), key = { it.id }) { message ->
-                when (message.role) {
-                    ChatMessage.Role.User -> UserBubble(message.text)
-                    ChatMessage.Role.Assistant -> AssistantBubble(
-                        caseName = message.caseName,
-                        markdown = message.text,
-                        dollarMath = dollarMath,
-                        codeBlocks = codeBlocks,
-                        streaming = null,
-                    )
+                if (replayStarted) {
+                    item(key = "replay-question") { UserBubble(REPLAY_QUESTION) }
+                    item(key = "replay-answer") {
+                        AssistantBubble(
+                            caseName = if (showsCaseLabels) "스트리밍 재생" else "",
+                            markdown = replayText,
+                            dollarMath = dollarMath,
+                            codeBlocks = codeBlocks,
+                            streaming = if (isStreaming) RichMarkdownStreamingOptions.Default else null,
+                        )
+                    }
+                    item(key = "replay-bottom") { Spacer(Modifier.height(1.dp)) }
                 }
             }
         }
@@ -195,7 +215,7 @@ private fun AssistantBubble(
         Box(
             Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(18.dp))
+                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(18.dp))
                 .padding(14.dp),
         ) {
             RichMarkdown(

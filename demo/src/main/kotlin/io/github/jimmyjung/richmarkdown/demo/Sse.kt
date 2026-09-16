@@ -50,7 +50,7 @@ class SseLineSplitter {
         buffer.reset()
         if (!strippedByteOrderMark) {
             strippedByteOrderMark = true
-            line = line.removePrefix("﻿")
+            line = line.removePrefix("\uFEFF")
         }
         return line
     }
