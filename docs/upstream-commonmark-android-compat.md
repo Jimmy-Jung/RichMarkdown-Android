@@ -2,7 +2,8 @@
 
 - 작성자: JunyoungJung
 - 작성일: 2026-09-15 (KST)
-- 상태: **자료만 준비.** 실제 이슈·PR 제출은 사용자 승인 뒤에 한다 (DEVELOPMENT.md D3a).
+- 상태: **이슈 등록됨** — https://github.com/commonmark/commonmark-java/issues/457 (2026-09-16, 사용자 승인). PR은 유지보수자 반응(해법 1 선택 시) 뒤에 보낸다.
+- 우리 쪽 minSdk는 30(D9a)으로 올려 이 이슈에 블로킹되지 않는다. 머지되면 하한을 다시 낮출 수 있다.
 
 ## 문제
 
@@ -16,6 +17,7 @@ Android 앱이 `minSdk < 30`이고 core library desugaring을 켜지 않으면 A
   `renderer/html/HtmlWriter.java`, `renderer/html/DefaultUrlSanitizer.java`, `parser/block/AbstractBlockParser.java`, `node/SourceSpans.java` (각 1).
 - upstream 상태: README가 "Android API 19 이상 best-effort 지원"을 명시하고, CI(`.github/workflows/ci.yml`)는 `commonmark-android-test`의
   **lint만** 실행한다(에뮬레이터 실행 없음). 그래서 회귀가 잡히지 않았다.
+- 출처: PR #322(2024-04, "Clean up usages of some old Java APIs")가 `Collections.*` → `List.of`/`Set.of`/`Map.of`로 바꾼 의도적 현대화. 이슈는 이 변경과 README의 "API 19" 문구가 어긋남을 짚는다.
 - 선례: PR #369 "Remove usage of requireNonNullElseGet (Android compat)"(2025-03) 머지 — 같은 종류의 수정이 받아들여진 기록.
 
 ## 제안

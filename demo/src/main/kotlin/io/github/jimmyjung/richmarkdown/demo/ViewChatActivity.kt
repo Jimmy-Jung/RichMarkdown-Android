@@ -10,13 +10,15 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.graphics.drawable.DrawerArrowDrawable
+import androidx.appcompat.widget.Toolbar
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
@@ -24,6 +26,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import io.github.jimmyjung.richmarkdown.LatexDollarMathOptions
 import io.github.jimmyjung.richmarkdown.RichMarkdownCodeBlockOptions
 import io.github.jimmyjung.richmarkdown.RichMarkdownStreamingOptions
 import io.github.jimmyjung.richmarkdown.RichMarkdownStreamingTextBuffer
@@ -37,12 +40,17 @@ import kotlinx.coroutines.launch
  *
  * iOS 데모의 메시지 ID별 뷰 캐시(`AssistantMessageViewCache`)는 옮기지 않았다 — Android는 스트리밍 append에서
  * 이전 렌더를 유지하고 완성 답변은 ParseCache가 재파싱을 막으므로, 셀 재사용 시 `markdown`만 다시 넣는다.
- * `stackFromEnd = true`로 마지막 버블이 자라도 바닥에 붙어 있게 한다.
+ * 첫 진입은 대화의 시작을 보여주고, 재생 중에는 마지막 버블을 따라간다.
  */
 class ViewChatActivity : AppCompatActivity() {
 
     /** 어댑터 행. 스트리밍 여부를 diff에 넣어 스트림 종료 시 마지막 셀이 다시 바인딩된다. */
-    data class Row(val message: ChatMessage, val streaming: Boolean)
+    data class Row(
+        val message: ChatMessage,
+        val streaming: Boolean,
+        val parsesDollarMath: Boolean,
+        val showsCaseLabels: Boolean,
+    )
 
     private val buffer by lazy { RichMarkdownStreamingTextBuffer(lifecycleScope) }
     private lateinit var adapter: ChatAdapter
@@ -50,9 +58,13 @@ class ViewChatActivity : AppCompatActivity() {
     private var replayJob: Job? = null
     private var replayText: String? = null
     private var isStreaming = false
+    private var parsesDollarMath = false
+    private var showsCaseLabels = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        parsesDollarMath = savedInstanceState?.getBoolean("parsesDollarMath") ?: false
+        showsCaseLabels = savedInstanceState?.getBoolean("showsCaseLabels") ?: true
         adapter = ChatAdapter(demoCodeBlocks(this))
         adapter.onContentSizeChange = {
             // 스트리밍 중 수식 hydration·다이어그램 렌더로 마지막 셀이 커지면 바닥을 유지한다.
@@ -72,7 +84,10 @@ class ViewChatActivity : AppCompatActivity() {
     }
 
     private fun buildLayout(): View {
-        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(if (isNight()) 0xFF000000.toInt() else 0xFFF2F2F7.toInt())
+        }
         // 시스템 바 아래로 콘텐츠가 깔리지 않게 한다 (targetSdk 35+ edge-to-edge).
         ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -80,33 +95,53 @@ class ViewChatActivity : AppCompatActivity() {
             insets
         }
 
-        val header = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(16), dp(8), dp(16), dp(8))
-            addView(
-                TextView(context).apply {
-                    setText(R.string.title_view_chat)
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
-                    typeface = Typeface.DEFAULT_BOLD
-                },
-                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f),
-            )
-            addView(Button(context).apply {
-                setText(R.string.action_replay)
-                setOnClickListener { replay() }
-            })
+        val header = Toolbar(this).apply {
+            title = "AI 챗봇"
+            setTitleTextColor(if (isNight()) 0xFFFFFFFF.toInt() else 0xFF000000.toInt())
+            navigationIcon = DrawerArrowDrawable(context).apply {
+                progress = 1f
+                color = if (root.isNight()) 0xFF0A84FF.toInt() else 0xFF007AFF.toInt()
+            }
+            navigationContentDescription = "뒤로 가기"
+            setNavigationOnClickListener { finish() }
+            menu.add("$ 수식").apply {
+                isCheckable = true
+                isChecked = parsesDollarMath
+                setOnMenuItemClickListener {
+                    parsesDollarMath = !parsesDollarMath
+                    isChecked = parsesDollarMath
+                    publish()
+                    true
+                }
+            }
+            menu.add("케이스 라벨").apply {
+                isCheckable = true
+                isChecked = showsCaseLabels
+                setOnMenuItemClickListener {
+                    showsCaseLabels = !showsCaseLabels
+                    isChecked = showsCaseLabels
+                    publish()
+                    true
+                }
+            }
+            menu.add(R.string.action_replay).apply {
+                setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+                setOnMenuItemClickListener {
+                    replay()
+                    true
+                }
+            }
         }
-        root.addView(header)
+        root.addView(header, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(56)))
 
         recycler = RecyclerView(this).apply {
-            layoutManager = LinearLayoutManager(context).apply { stackFromEnd = true }
+            layoutManager = LinearLayoutManager(context)
             adapter = this@ViewChatActivity.adapter
             // 기본 change 애니메이션은 갱신마다 새 ViewHolder를 만들어 이전 홀더와 교차 페이드한다 — 스트리밍 중
             // 같은 셀이 겹쳐 그려지고 RichMarkdownView의 append 증분 렌더도 버려진다. 같은 홀더를 제자리에서 다시 바인딩한다.
             itemAnimator = null
             clipToPadding = false
-            setPadding(dp(16), dp(16), dp(16), dp(16))
+            setPadding(dp(16), dp(20), dp(16), dp(20))
         }
         // iOS `DemoLayout.readableWidth` 720pt: 넓은 화면에서는 폭을 멈추고 가운데 둔다.
         val readableWidth = minOf(resources.displayMetrics.widthPixels, dp(720))
@@ -124,10 +159,12 @@ class ViewChatActivity : AppCompatActivity() {
 
     /** fixture + (재생 중이면) 질문·스트리밍 답변을 한 리스트로 게시한다. */
     private fun publish(scrollToEnd: Boolean = false) {
-        val rows = SampleMarkdown.conversation.map { Row(it, streaming = false) }.toMutableList()
+        fun row(message: ChatMessage, streaming: Boolean = false) =
+            Row(message, streaming, parsesDollarMath, showsCaseLabels)
+        val rows = SampleMarkdown.conversation.map { row(it) }.toMutableList()
         replayText?.let { text ->
-            rows += Row(ChatMessage(REPLAY_QUESTION_ID, ChatMessage.Role.User, REPLAY_QUESTION), streaming = false)
-            rows += Row(ChatMessage(REPLAY_ANSWER_ID, ChatMessage.Role.Assistant, text, "스트리밍 재생"), streaming = isStreaming)
+            rows += row(ChatMessage(REPLAY_QUESTION_ID, ChatMessage.Role.User, REPLAY_QUESTION))
+            rows += row(ChatMessage(REPLAY_ANSWER_ID, ChatMessage.Role.Assistant, text, "스트리밍 재생"), streaming = isStreaming)
         }
         // submitList의 diff는 비동기다. 커밋 콜백에서 itemCount를 읽어야 새 행까지 스크롤된다.
         adapter.submitList(rows) { if (scrollToEnd) recycler.scrollToPosition(adapter.itemCount - 1) }
@@ -151,6 +188,12 @@ class ViewChatActivity : AppCompatActivity() {
                 publish()
             }
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean("parsesDollarMath", parsesDollarMath)
+        outState.putBoolean("showsCaseLabels", showsCaseLabels)
+        super.onSaveInstanceState(outState)
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
@@ -209,7 +252,7 @@ private class UserHolder(context: Context) : RecyclerView.ViewHolder(
     private val text = TextView(context).apply {
         val d = resources.displayMetrics.density
         setPadding((14 * d).toInt(), (10 * d).toInt(), (14 * d).toInt(), (10 * d).toInt())
-        background = bubble(if (isNight()) 0x4D4C8DFF else 0x2600A0FF.toInt())
+        background = bubble(if (isNight()) 0x260A84FF else 0x26007AFF)
         setTextIsSelectable(true)
     }
 
@@ -262,7 +305,7 @@ private class AssistantHolder(
         )
         column.addView(
             FrameLayout(context).apply {
-                background = bubble(if (isNight()) 0xFF2C2C2E.toInt() else 0xFFFFFFFF.toInt())
+                background = bubble(if (isNight()) 0xFF1C1C1E.toInt() else 0xFFFFFFFF.toInt())
                 setPadding((14 * d).toInt(), (14 * d).toInt(), (14 * d).toInt(), (14 * d).toInt())
                 addView(
                     markdownView,
@@ -275,7 +318,8 @@ private class AssistantHolder(
 
     fun bind(row: ViewChatActivity.Row) {
         label.text = row.message.caseName
-        label.visibility = if (row.message.caseName.isEmpty()) View.GONE else View.VISIBLE
+        label.visibility = if (row.showsCaseLabels && row.message.caseName.isNotEmpty()) View.VISIBLE else View.GONE
+        markdownView.dollarMath = if (row.parsesDollarMath) LatexDollarMathOptions.Single else LatexDollarMathOptions.None
         markdownView.markdown = row.message.text
         markdownView.streaming = if (row.streaming) RichMarkdownStreamingOptions.Default else null
     }

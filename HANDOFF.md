@@ -6,7 +6,7 @@
 
 ## 현재 지점
 
-- 커밋: P1·P2(데모·스크린샷·API 24 실측·발행 설정) 반영. 남은 항목: Maven Central 실제 발행(사용자 승인), upstream PR 자료.
+- 커밋: P1·P2 완료, minSdk 30(D9a), upstream 이슈 #457 등록. 남은 항목: Maven Central 실제 발행(사용자 승인·자격 증명) 또는 JitPack 설정.
 - 설계 정본: `DEVELOPMENT.md`(결정 D0~D9·D3a, §8 P0 결과). API 계약: `docs/P1-CONTRACTS.md`.
 - 에뮬레이터: AVD `Pixel_6`(android-37.1, 16 KB 페이지). `API24_Pixel6`는 minSdk 30 이후 검증 대상이 아니다(참고용).
 
@@ -45,7 +45,7 @@ export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:+$JAVA_TOOL_OPTIONS }-Djava.io.tmp
 - [x] `README.md` 사용법(실제 API) 보강, `THIRD_PARTY_NOTICES.md` 점검(okhttp 추가)
 - [x] Maven Central 발행 설정(vanniktech maven.publish 0.37.0, POM_* in gradle.properties, `publishToMavenLocal` 검증)
 - [ ] Maven Central 실제 발행 — 사용자 승인 + `~/.gradle/gradle.properties`에 mavenCentralUsername/Password·signingInMemoryKey/Password 설정 후 `./gradlew publishToMavenCentral -PRELEASE_SIGNING_ENABLED=true`
-- [x] upstream PR 자료: `docs/upstream-commonmark-android-compat.md` (제출은 사용자 승인 후)
+- [x] upstream 이슈 등록: https://github.com/commonmark/commonmark-java/issues/457 (2026-09-16). PR은 유지보수자가 해법 1(치환)을 원하면 진행
 
 ## 위임 규칙 (cc2)
 
