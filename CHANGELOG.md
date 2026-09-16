@@ -46,6 +46,11 @@ semver다. `0.x`에서는 minor 버전에서도 공개 API가 바뀔 수 있다.
 - 발행 설정: `com.vanniktech.maven.publish` 0.37.0, 좌표 `io.github.jimmy-jung:richmarkdown{,-core,-highlight,-mermaid}`,
   POM 메타데이터(MIT). `publishToMavenLocal` 검증. Central 발행은 자격 증명·서명 키 준비 후.
 
+### Changed
+
+- minSdk 24 → 30 (D9a, 2026-09-16). commonmark-java `List.of`를 desugaring 없이 쓰기 위한 하한. 소비 앱의
+  `coreLibraryDesugaring` 요건과 README 필수 설정 절을 제거했다. 데모 앱도 desugaring을 끈다.
+
 ### Fixed
 
 - View 렌더러 표 셀 높이가 행에 맞지 않아 테두리가 어긋나던 결함.

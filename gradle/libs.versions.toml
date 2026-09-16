@@ -7,7 +7,7 @@
 agp = "9.4.0"
 kotlin = "2.4.20"
 compileSdk = "37"
-minSdk = "24"
+minSdk = "30"
 
 composeBom = "2026.09.00"
 coreKtx = "1.19.0"

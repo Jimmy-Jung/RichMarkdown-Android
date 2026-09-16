@@ -1,7 +1,7 @@
 # RichMarkdown (Android)
 
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.4-7F52FF.svg)](https://kotlinlang.org)
-[![Android](https://img.shields.io/badge/Android-minSdk%2024-3DDC84.svg)](https://developer.android.com)
+[![Android](https://img.shields.io/badge/Android-minSdk%2030-3DDC84.svg)](https://developer.android.com)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-0.1.0%20%EA%B0%9C%EB%B0%9C%20%EC%A4%91-yellow.svg)](CHANGELOG.md)
 
@@ -63,25 +63,11 @@ dependencies {
 }
 ```
 
-### API 30 미만을 지원하는 앱의 필수 설정
+### minSdk 30
 
-파서 의존성 commonmark-java 0.30이 `java.util.List.of`(Android API 30+)를 쓴다. `minSdk`가
-30 미만인 앱은 **core library desugaring**을 켜야 한다. 켜지 않으면 API 30 미만 기기에서
-파싱이 실패하고, 라이브러리는 크래시 대신 Markdown 원문을 그대로 표시한다(fail-open).
-
-```kotlin
-android {
-    compileOptions {
-        isCoreLibraryDesugaringEnabled = true
-    }
-}
-
-dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
-}
-```
-
-이 요건은 upstream에 `List.of` 치환 PR이 머지되면 제거한다(DEVELOPMENT.md D3a).
+파서 의존성 commonmark-java 0.30이 `java.util.List.of`(Android API 30+)를 쓴다. 라이브러리 minSdk를 30으로 두어
+소비 앱에 core library desugaring을 요구하지 않는다(DEVELOPMENT.md D9, 2026-09-16). API 30 미만 기기를 지원해야 하는 앱은
+이 라이브러리를 쓸 수 없다. upstream에 `List.of` 치환을 제안한 이슈가 머지되면 하한을 다시 낮출 수 있다(D3a ③).
 
 ## 사용법
 
@@ -154,7 +140,7 @@ RichMarkdown(markdown = message, codeBlocks = codeBlocks)
 
 | 항목 | 값 |
 |---|---|
-| minSdk | 24 (전 모듈 동일. 근거: androidx.webkit 1.17.0 floor) |
+| minSdk | 30 (Android 11). commonmark-java `List.of` 네이티브 지원 하한 |
 | compileSdk | 37 (Compose BOM 2026.09.00의 compose 1.12.1이 37 이상 요구, AAR 메타데이터 검사 실측) |
 | 빌드 | AGP 9.4.0, Gradle 9.6.0, Kotlin 2.4.20, JDK 17+ |
 | 파서 | commonmark-java 0.30.0 (+ gfm-tables, gfm-strikethrough) |

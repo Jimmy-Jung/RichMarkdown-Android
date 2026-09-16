@@ -8,7 +8,7 @@
 
 - 커밋: P1·P2(데모·스크린샷·API 24 실측·발행 설정) 반영. 남은 항목: Maven Central 실제 발행(사용자 승인), upstream PR 자료.
 - 설계 정본: `DEVELOPMENT.md`(결정 D0~D9·D3a, §8 P0 결과). API 계약: `docs/P1-CONTRACTS.md`.
-- 에뮬레이터: AVD `Pixel_6`(android-37.1, 16 KB 페이지). API 24 이미지 `system-images;android-24;google_apis;arm64-v8a` 설치 진행/완료 여부는 `sdkmanager --list_installed`로 확인.
+- 에뮬레이터: AVD `Pixel_6`(android-37.1, 16 KB 페이지). `API24_Pixel6`는 minSdk 30 이후 검증 대상이 아니다(참고용).
 
 ## 빌드 환경 (외장 SSD 규칙, 필수)
 

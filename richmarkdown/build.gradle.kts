@@ -18,7 +18,7 @@ android {
     compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
-        // D9: androidx.webkit 1.17.0의 floor. 전 모듈 동일.
+        // D9(2026-09-16 대체): 30 — commonmark `List.of`(API 30)를 desugaring 없이 쓰기 위한 하한. 전 모듈 동일.
         minSdk = libs.versions.minSdk.get().toInt()
         consumerProguardFiles("consumer-rules.pro")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

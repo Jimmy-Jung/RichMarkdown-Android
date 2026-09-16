@@ -25,7 +25,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
         // D3a (필수): commonmark의 `List.of`(API 30)를 API 24~29에서 desugar_jdk_libs로 제공한다.
-        isCoreLibraryDesugaringEnabled = true
     }
 
     buildFeatures {
@@ -34,7 +33,6 @@ android {
 }
 
 dependencies {
-    coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     implementation(project(":richmarkdown"))
     implementation(project(":richmarkdown-highlight"))
