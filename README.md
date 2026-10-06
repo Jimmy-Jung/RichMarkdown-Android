@@ -3,10 +3,10 @@
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.4-7F52FF.svg)](https://kotlinlang.org)
 [![Android](https://img.shields.io/badge/Android-minSdk%2030-3DDC84.svg)](https://developer.android.com)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.0%20%EA%B0%9C%EB%B0%9C%20%EC%A4%91-yellow.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.1.0%20beta-yellow.svg)](CHANGELOG.md)
 
-> **0.1.0 개발 중** — Compose·View 렌더러, 코드 블록 확장 2종, 데모 앱을 구현했다.
-> 아직 Maven Central에 발행하지 않았다. `0.x`에서는 minor 버전에도 공개 API가 바뀔 수 있다.
+> **0.1.0 beta** — Compose·View 렌더러, 코드 블록 확장 2종, 데모 앱, iOS와 같은 RaTeX 수식 엔진.
+> GitHub Release 태그로 배포하며 Maven Central에는 아직 발행하지 않았다. `0.x`에서는 minor 버전에도 공개 API가 바뀔 수 있다.
 > 변경 내역은 [CHANGELOG.md](CHANGELOG.md)를 본다.
 
 iOS [RichMarkdown](https://github.com/Jimmy-Jung/RichMarkdown)과 **동일한 렌더 계약**을 제공하는
@@ -388,7 +388,7 @@ paragraph 전체를 감싼 `$$ ... $$`는 여전히 block이다.
 
 | Android | iOS | 비고 |
 |---|---|---|
-| 0.1.0 (개발 중) | 0.7.1 | 수식 문법·fail-open·스트리밍 규칙 동일. 수식 서체는 KaTeX 단일 |
+| 0.1.0 | 0.8.0 | 수식 문법·fail-open·스트리밍 규칙 동일. 수식 서체는 KaTeX 단일 |
 
 ## 빌드와 테스트
 

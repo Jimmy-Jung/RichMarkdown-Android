@@ -1,12 +1,12 @@
 # HANDOFF — 작업 인계 보드
 
 - 작성자: JunyoungJung
-- 갱신: 2026-09-15 (KST)
+- 갱신: 2026-10-06 (KST)
 - 용도: 세션이 바뀌어도(예: `cc2` 프로필로 위임) 같은 지점에서 이어 가기 위한 상태판. 완료 항목은 체크하고 커밋에 포함한다.
 
 ## 현재 지점
 
-- 커밋: P1·P2 완료, minSdk 30(D9a), upstream 이슈 #457 등록. 남은 항목: Maven Central 실제 발행(사용자 승인·자격 증명) 또는 JitPack 설정.
+- 커밋: P1·P2 완료, minSdk 30(D9a), upstream 이슈 #457 등록, 복합 수식 상한 수정. 0.1.0 태그·GitHub Release(2026-10-06). 남은 항목: Maven Central 실제 발행(사용자 승인·자격 증명) 또는 JitPack 설정.
 - 설계 정본: `DEVELOPMENT.md`(결정 D0~D9·D3a, §8 P0 결과). API 계약: `docs/P1-CONTRACTS.md`.
 - 에뮬레이터: AVD `Pixel_6`(android-37.1, 16 KB 페이지). `API24_Pixel6`는 minSdk 30 이후 검증 대상이 아니다(참고용).
 

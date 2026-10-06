@@ -5,6 +5,12 @@ semver다. `0.x`에서는 minor 버전에서도 공개 API가 바뀔 수 있다.
 
 ## [Unreleased]
 
+### Not yet
+
+- Maven Central 실제 발행(사용자 승인), commonmark-java upstream PR(D3a ③).
+
+## [0.1.0] - 2026-10-06
+
 ### Added
 
 - 저장소 골격: Gradle 9.6.0 + AGP 9.4.0 + Kotlin 2.4.20, compileSdk 37 / minSdk 24, 모듈 4개
@@ -58,6 +64,5 @@ semver다. `0.x`에서는 minor 버전에서도 공개 API가 바뀔 수 있다.
   parse 전에는 4 KiB 원문과 1–1024 px 폰트만 검사하고, parse 후 실제 layout 크기로
   각 변 8192 px·4,194,304 pixel을 raster·벡터 공통 경계에서 제한한다.
 
-### Not yet
-
-- Maven Central 실제 발행(사용자 승인), commonmark-java upstream PR(D3a ③).
+[Unreleased]: https://github.com/Jimmy-Jung/RichMarkdown-Android/compare/0.1.0...HEAD
+[0.1.0]: https://github.com/Jimmy-Jung/RichMarkdown-Android/releases/tag/0.1.0
