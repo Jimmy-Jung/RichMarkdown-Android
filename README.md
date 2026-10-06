@@ -44,8 +44,8 @@ WebView 없이 네이티브로 렌더한다. Jetpack Compose는 `RichMarkdown()`
 
 | 전체 샘플 · Compose | 전체 샘플 · View |
 |---|---|
-| <img src="docs/screenshots/01-showcase-compose.png" alt="인라인 수식과 블록 수식을 나열한 Compose 쇼케이스" width="260"> | <img src="docs/screenshots/02-showcase-view.png" alt="같은 샘플 문서를 View 렌더러로 표시한 쇼케이스" width="260"> |
-| 수식, Markdown, 표, 코드 등 전체 샘플을 순서대로 살펴본다. | 같은 원문을 두 렌더러로 비교하며 옵션 메뉴에서 표시 설정을 바꾼다. |
+| <img src="docs/screenshots/01-showcase-compose.png" alt="array와 두 underbrace로 나눈 복합 수식부터 시작하는 Compose 쇼케이스" width="260"> | <img src="docs/screenshots/02-showcase-view.png" alt="같은 복합 수식과 샘플 문서를 View 렌더러로 표시한 쇼케이스" width="260"> |
+| `array`·`\underbrace` 복합 수식을 시작으로 수식, Markdown, 표, 코드 등 전체 샘플을 순서대로 살펴본다. 넓은 수식은 가로로 스크롤한다. | 같은 원문을 두 렌더러로 비교하며 옵션 메뉴에서 표시 설정을 바꾼다. |
 
 ### SSE 스트리밍
 
