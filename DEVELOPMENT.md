@@ -73,6 +73,15 @@ LLM 채팅 메시지의 Markdown + GFM 표 + 인라인/블록 LaTeX + 코드 블
 
 D4 확정 근거: §8 P0 spike 결과 ①②③ 전부 통과 (2026-09-15, Pixel_6 에뮬레이터 API 37.1 · 16 KB 페이지).
 
+D4 복합 수식 보완(2026-10-06): RaTeX 0.1.14는 `array`·`underbrace`를 이미 렌더링한다.
+기존 `원문 byte × fontSizePx` 예상폭 제한이 정상 복합 수식을 48 px에서 거부했으므로,
+parse 전 4 KiB 원문·1–1024 px 폰트 검사는 유지하고 parse 후 실제 width/height로 각 변
+8192 px·올림한 pixel count 4,194,304를 제한한다. raster와 벡터가 같은 경계를 쓴다.
+`MathRenderServiceTest`는 단일 underbrace·2행 array·3행/두 underbrace·cases와 실패 경로를 검사한다.
+복합 예시는 각 값 열의 `array`를 `underbrace`로 감싸고 `vphantom`으로 첫 행 높이를 맞춘다.
+공백만 감싼 `underbrace{\quad}`를 별도 행으로 둔 표현은 RaTeX에서 brace/라벨이 생략되므로
+회귀 테스트는 하단 brace 획까지 검사하며, 데모는 실제 값 열을 감싼 수식을 사용한다.
+
 ## 3. iOS에서 그대로 옮기는 계약 (결정 불필요 — 근거는 "동일 계약")
 
 - 수식 문법: `\(`·`\[` 기본, `$`·`$$`는 opt-in(`DollarMathOptions.Single`), 문장 안 `$$`는

@@ -54,24 +54,21 @@ class MathVectorLayout internal constructor(private val renderer: RaTeXRenderer)
 }
 
 /**
- * iOS `RasterInputLimits` 이식. RaTeX는 parse 전에 layout 크기를 알려주지 않으므로 font 크기와
- * source 길이를 함께 제한해 비정상 요청을 bitmap allocation 전에 막는 보수적 작업 상한이다.
- * pxPerEm = fontSizePx (iOS pointSize × max(displayScale, sourceRendererScale)에 해당).
+ * parse 전에는 원문 byte와 폰트 범위만 제한한다. LaTeX 명령 길이는 실제 화면 폭과 다르므로
+ * bitmap·벡터 크기는 parse 뒤 공통 renderer 경계에서 검사한다.
  */
 private object RasterInputLimits {
     const val MIN_FONT_SIZE_PX = 1.0
     /** iOS maximumPointSize 256 × maximumDisplayScale 4. */
     const val MAX_FONT_SIZE_PX = 1024.0
-    const val MAX_ESTIMATED_PIXEL_EDGE = 8_192.0
-    const val MAX_ESTIMATED_PIXEL_COUNT = 4_194_304.0
+    const val MAX_PIXEL_EDGE = 8_192.0
+    const val MAX_PIXEL_COUNT = 4_194_304.0
 
     fun allows(key: MathRenderKey): Boolean {
         val pxPerEm = key.fontSizePx.toDouble()
         if (!pxPerEm.isFinite() || pxPerEm < MIN_FONT_SIZE_PX || pxPerEm > MAX_FONT_SIZE_PX) return false
         val sourceUnits = key.latex.toByteArray(Charsets.UTF_8).size
-        if (sourceUnits > InputLimits.MAX_MATH_SOURCE_UTF8_BYTES) return false
-        return sourceUnits * pxPerEm <= MAX_ESTIMATED_PIXEL_EDGE &&
-            sourceUnits * pxPerEm * pxPerEm <= MAX_ESTIMATED_PIXEL_COUNT
+        return sourceUnits <= InputLimits.MAX_MATH_SOURCE_UTF8_BYTES
     }
 }
 
@@ -118,8 +115,8 @@ class MathRenderService private constructor() {
     }
 
     /**
-     * 블록 수식 벡터 layout. raster와 같은 preflight 상한을 공유한다 — bitmap이 없어도 병리적
-     * 입력의 typeset 비용은 같기 때문이다(iOS `BlockMathVectorView.make`). 캐시하지 않는다.
+     * 블록 수식 벡터 layout. raster와 같은 원문·폰트 사전 제한과 실제 크기 상한을 공유한다.
+     * 캐시하지 않는다.
      */
     suspend fun layout(key: MathRenderKey): MathVectorLayout? {
         if (!preflightAllows(key)) return null
@@ -137,14 +134,8 @@ class MathRenderService private constructor() {
         val renderer = newRenderer(key) ?: return null
         val widthPx = renderer.widthPx
         val totalHeightPx = renderer.totalHeightPx
-        if (!widthPx.isFinite() || !totalHeightPx.isFinite()) return warnOnce(key, "크기가 유효하지 않음")
-
         val width = ceil(widthPx).toInt().coerceAtLeast(1)
         val height = ceil(totalHeightPx).toInt().coerceAtLeast(1)
-        // iOS `pixelByteCost <= maximumEstimatedPixelCount * 4`와 같은 상한.
-        if (width.toLong() * height > RasterInputLimits.MAX_ESTIMATED_PIXEL_COUNT) {
-            return warnOnce(key, "bitmap ${width}×${height} 상한 초과")
-        }
 
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         renderer.draw(Canvas(bitmap))
@@ -164,7 +155,16 @@ class MathRenderService private constructor() {
         } catch (e: RaTeXException) {
             return warnOnce(key, e.message ?: "parse error")
         }
-        return RaTeXRenderer(displayList, key.fontSizePx, RaTeXFontLoader::getTypeface)
+        val renderer = RaTeXRenderer(displayList, key.fontSizePx, RaTeXFontLoader::getTypeface)
+        val width = renderer.widthPx.toDouble()
+        val height = renderer.totalHeightPx.toDouble()
+        if (!width.isFinite() || !height.isFinite() || width < 0 || height < 0 ||
+            width > RasterInputLimits.MAX_PIXEL_EDGE || height > RasterInputLimits.MAX_PIXEL_EDGE ||
+            ceil(width).coerceAtLeast(1.0) * ceil(height).coerceAtLeast(1.0) > RasterInputLimits.MAX_PIXEL_COUNT
+        ) {
+            return warnOnce(key, "layout ${width}×${height} 상한 초과")
+        }
+        return renderer
     }
 
     private fun <T> warnOnce(key: MathRenderKey, reason: String): T? {
@@ -181,8 +181,8 @@ class MathRenderService private constructor() {
         val shared: MathRenderService by lazy { MathRenderService() }
 
         /**
-         * latex ≤ 4096 UTF-8 bytes, 1 ≤ fontSizePx ≤ 1024, sourceUnits×pxPerEm ≤ 8192,
-         * sourceUnits×pxPerEm² ≤ 4,194,304. 벡터 경로도 같은 판정을 쓴다.
+         * latex ≤ 4096 UTF-8 bytes, 1 ≤ fontSizePx ≤ 1024. 실제 크기는 parse 뒤 raster·벡터
+         * 공통 경계에서 edge ≤ 8192, pixel count ≤ 4,194,304로 제한한다.
          */
         fun preflightAllows(key: MathRenderKey): Boolean = RasterInputLimits.allows(key)
     }

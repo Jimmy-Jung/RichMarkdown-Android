@@ -30,6 +30,38 @@ data class SampleSection(val title: String, val markdown: String)
  */
 object SampleMarkdown {
 
+    /** 복합 수식: Markdown 설명과 array·분수·조건·두 underbrace를 함께 렌더링한다. */
+    val complexMath: String = """
+        ## 복합 수식과 아래 중괄호
+
+        **보상 함수**를 조건별로 나누고, 아래 중괄호(`\underbrace`)로 두 항을 구분합니다.
+
+        \[
+        r_t=\left\{\begin{array}{ccc}
+        \underbrace{\begin{array}{c}
+        1+\frac{\bar{R}_Q(t+\Delta t)-R_Q(t)}{2\Delta t/T_{\mathrm{single}}}\\
+        0\\
+        0
+        \end{array}}_{r_t^{(1)}}&
+        \underbrace{\begin{array}{c}
+        \vphantom{\frac{\bar{R}_Q}{T_{\mathrm{single}}}}+0\\
+        -P\\
+        +0
+        \end{array}}_{r_t^{(2)}}&
+        \begin{array}{l}
+        \vphantom{\frac{\bar{R}_Q}{T_{\mathrm{single}}}}\mathrm{if}\ \bar{R}_Q(t+\Delta t)>0\\
+        \mathrm{if}\ \bar{R}_Q(t)\ne0\ \mathrm{and}\ R_Q(t+\Delta t)=0\\
+        \mathrm{if}\ R_Q(t)=0
+        \end{array}
+        \end{array}\right.
+        \]
+
+        - 첫 번째 아래 중괄호: \(r_t^{(1)}\)
+        - 두 번째 아래 중괄호: \(r_t^{(2)}\)
+
+        > 긴 수식은 가로로 스크롤하며 볼 수 있습니다.
+    """.trimIndent()
+
     /** iOS `ChatDemo.swift` — "Dollar math (opt-in) · 통화 표기" 답변. `$` 토글 비교용. */
     val dollarMath: String = """
         opt-in이 꺼져 있으면 아래는 모두 그냥 텍스트입니다. `$` 수식 토글을 켜서 비교하세요.
@@ -389,9 +421,10 @@ object SampleMarkdown {
         본문 한글과 수식 baseline이 한 줄에서 맞아야 합니다: 값은 \(x = 3\)이고 단위는 \(\text{cm}\)입니다.
     """.trimIndent()
 
-    /** 쇼케이스 화면 구획. 답변 fixture 전부 + 코드 블록 확장 + 한글 수식. */
+    /** 쇼케이스 화면 구획. 복합 수식 + 답변 fixture 전부 + 코드 블록 확장 + 한글 수식. */
     val showcaseSections: List<SampleSection> =
-        conversation.filter { it.role == ChatMessage.Role.Assistant }.map { SampleSection(it.caseName, it.text) } +
+        listOf(SampleSection("복합 수식 · array · underbrace", complexMath)) +
+            conversation.filter { it.role == ChatMessage.Role.Assistant }.map { SampleSection(it.caseName, it.text) } +
             SampleSection("코드 블록 확장 · Prism · Mermaid", codeBlockExtensions) +
             SampleSection("수식 안 한글 · \\text{}", koreanInMath)
 

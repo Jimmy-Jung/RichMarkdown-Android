@@ -130,23 +130,19 @@ class RenderModelLogicTest {
     @Test
     fun preflight_sourceLengthBoundaries() {
         val max = InputLimits.MAX_MATH_SOURCE_UTF8_BYTES
-        // 4096 × 2 = 8192 (edge 한계), 4096 × 2² = 16384 (count 여유).
+        // 원문 byte 제한은 폰트 크기와 무관하게 parse 전에 적용한다.
         assertTrue(MathRenderService.preflightAllows(key("x".repeat(max), 2f)))
         assertFalse(MathRenderService.preflightAllows(key("x".repeat(max + 1), 2f)))
         assertFalse("UTF-8 byte 기준", MathRenderService.preflightAllows(key("한".repeat(max / 3 + 1), 1f)))
     }
 
     @Test
-    fun preflight_pixelEstimateBoundaries() {
-        // edge: 8 × 1024 = 8192 통과지만 count 8 × 1024² > 4,194,304 → 거절.
-        assertFalse(MathRenderService.preflightAllows(key("x".repeat(8), 1024f)))
-        // count: 4 × 1024² = 4,194,304 정확히 한계 → 통과.
-        assertTrue(MathRenderService.preflightAllows(key("x".repeat(4), 1024f)))
-        // edge: 9 × 1024 = 9216 > 8192 → 거절 (count는 무관).
-        assertFalse(MathRenderService.preflightAllows(key("x".repeat(9), 1024f)))
-        // 일상 값 17sp@3x = 51 px: edge 한계는 8192 / 51 → 160 byte (iOS 17pt@3x와 같은 상한).
-        assertTrue(MathRenderService.preflightAllows(key("x".repeat(160), 51f)))
-        assertFalse(MathRenderService.preflightAllows(key("x".repeat(161), 51f)))
+    fun preflightDoesNotTreatCommandBytesAsPixelWidth() {
+        val latex = "\\underbrace{\\begin{array}{cc}" + "a&b\\\\".repeat(32) + "\\end{array}}_{q}"
+        assertTrue(latex.toByteArray().size > 160)
+        assertTrue(MathRenderService.preflightAllows(key(latex, 51f)))
+        // 실제 크기 상한은 Android MathRenderServiceTest에서 renderer 결과로 검사한다.
+        assertTrue(MathRenderService.preflightAllows(key("x".repeat(161), 51f)))
     }
 
     // MARK: - RichMarkdownStreamingTextBuffer

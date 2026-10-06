@@ -256,6 +256,9 @@ stale이 된 연산 결과는 UI에도 cache에도 넣지 않는다.
 View는 `ReplacementSpan`, Compose는 `InlineTextContent`로 문장 흐름에 넣는다.
 블록 수식은 bitmap 없이 벡터 경로를 Canvas에 직접 그린다.
 
+`array`의 열 정렬과 `\underbrace{...}_{...}`를 지원한다. 분수·조건식·두 아래 중괄호가
+조합된 복합 수식은 데모 «복합 수식 · array · underbrace»에서 Markdown 설명과 함께 볼 수 있다.
+
 cache key는 LaTeX 원문, 수식 서체, 실제 px 크기, resolved ARGB, display 여부다
 (iOS의 pointSize × displayScale은 `fontSizePx` 하나로 합쳤다). cost는 bitmap pixel byte,
 상한은 64 MiB `LruCache`다.
@@ -268,6 +271,8 @@ cache key는 LaTeX 원문, 수식 서체, 실제 px 크기, resolved ARGB, displ
 | 초과 시 표시 | 64 KiB | grapheme 경계로 자르고 `… [입력 제한 초과]` 추가 |
 | block quote 깊이 | 64 | 파서가 재귀로 처리하므로 parse 전에 제한 |
 | 수식 source byte | 4 KiB | RaTeX 호출 전에 거부 |
+| 수식 폰트 크기 | 1–1024 px | 유한한 값만 RaTeX 호출 전에 허용 |
+| 수식 실제 크기 | 각 변 8192 px / 4,194,304 pixel | parse 후 raster·벡터 공통 경계에서 거부 |
 | 표 | 32열 / 512셀 | 초과하면 읽을 수 있는 plain text로 낮춤 |
 
 수치는 내부 구현이며 공개 설정으로 노출하지 않는다.

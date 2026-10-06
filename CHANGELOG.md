@@ -54,6 +54,9 @@ semver다. `0.x`에서는 minor 버전에서도 공개 API가 바뀔 수 있다.
 ### Fixed
 
 - View 렌더러 표 셀 높이가 행에 맞지 않아 테두리가 어긋나던 결함.
+- `array`·`\underbrace` 복합 수식이 원문 byte × 폰트 크기 예상폭 상한에 걸려 거부되던 결함.
+  parse 전에는 4 KiB 원문과 1–1024 px 폰트만 검사하고, parse 후 실제 layout 크기로
+  각 변 8192 px·4,194,304 pixel을 raster·벡터 공통 경계에서 제한한다.
 
 ### Not yet
 
