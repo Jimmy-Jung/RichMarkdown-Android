@@ -1,19 +1,23 @@
 # P1 구현 계약 — 공유 렌더 모델 API
 
-- 작성자: JunyoungJung
 - 작성일: 2026-09-15 (KST)
-- 상태: P1 착수 기준. 병렬 구현자(Compose 렌더러·View 렌더러·Highlight·Mermaid)는 이 시그니처에 맞춰 코드를 쓴다.
-  구현 중 바꿔야 하면 이 문서를 먼저 고치고 커밋 메시지에 적는다.
+- 수정일: 2026-10-07
+- 상태: P1에서 정한 공유 모델 구조를 현재 0.2.0 릴리스 대상 API에 맞춰 갱신했습니다.
+  아래 코드는 주요 타입과 호출 규칙을 요약한 계약입니다. 최종 시그니처는 현재 소스를 따르며 실행 검수는 [검수 기록](report/validation.md)에 연결합니다.
 
 모듈 `richmarkdown`, 패키지 `io.github.jimmyjung.richmarkdown`. iOS 원본: `RichMarkdownRenderModel.swift`,
 `MathRenderService.swift`, `ParseCache.swift`, `RichMarkdownStreamingOptions.swift`(버퍼).
+
+수식 서체는 RaTeX가 KaTeX 기반 내장 글꼴에서 자동으로 선택합니다. 0.2.0에서는
+`LatexMathFont`와 테마·요청·캐시 키의 `mathFont` 선택 인자를 제거했습니다.
+기존 코드에서는 해당 인자를 삭제하고 크기·색·블록 여부만 전달합니다. `fontSizePx`와
+내부 표시 문맥의 `mathFontSizePx`는 크기 값이므로 유지합니다.
 
 ## 1. MathRenderService.kt — RaTeX 격리 (이 파일만 `io.ratex.*` import)
 
 ```kotlin
 data class MathRenderKey(
     val latex: String,
-    val mathFont: LatexMathFont,
     val fontSizePx: Float,          // iOS pointSize × displayScale에 해당. px 단위 하나로 통일
     @ColorInt val colorArgb: Int,
     val isDisplay: Boolean,
@@ -36,8 +40,8 @@ class MathVectorLayout internal constructor(...) {
 class MathRenderService private constructor() {
     companion object {
         val shared: MathRenderService
-        fun preflightAllows(key: MathRenderKey): Boolean   // latex ≤ 4096 UTF-8 bytes, 1 ≤ fontSizePx ≤ 1024,
-                                                           // sourceUnits×pxPerEm ≤ 8192, sourceUnits×pxPerEm² ≤ 4,194,304 (iOS RasterInputLimits 동일)
+        fun preflightAllows(key: MathRenderKey): Boolean   // latex ≤ 4096 UTF-8 bytes, 1 ≤ fontSizePx ≤ 1024
+                                                           // 배치 결과 생성 뒤 실제 각 변 ≤ 8192, 올림한 면적 ≤ 4,194,304를 별도로 검사
     }
     fun ensureFontsLoaded(context: Context)                // RaTeXFontLoader.ensureLoaded(applicationContext). 멱등, 아무 스레드
     fun cachedImage(key: MathRenderKey): RenderedMath?     // LruCache(cost = bitmap.byteCount, 64 MiB), hop 없음
@@ -71,12 +75,11 @@ class RichMarkdownRenderModel(scope: CoroutineScope) {   // scope = main dispatc
         val dollarMath: LatexDollarMathOptions,
         val fontSizePx: Float,
         @ColorInt val colorArgb: Int,
-        val mathFont: LatexMathFont = LatexMathFont.KaTeX,
-        val rastersDisplayMath: Boolean = true,      // View 렌더러는 블록 수식을 벡터로 그리므로 false
+        val rastersDisplayMath: Boolean = true,      // 현재 Compose·View 모두 블록 수식을 벡터로 그리므로 false 전달
     ) {
         val markdown: String; val wasTruncated: Boolean; val parseIdentity: ParseIdentity
         fun matchesRasterConfiguration(other: Request): Boolean
-        companion object { fun of(markdown: String, dollarMath: LatexDollarMathOptions, fontSizePx: Float, colorArgb: Int, ...): Request /* InputLimits.bound 적용 */ }
+        companion object { fun of(markdown: String, dollarMath: LatexDollarMathOptions, fontSizePx: Float, colorArgb: Int, rastersDisplayMath: Boolean = true): Request /* InputLimits.bound 적용 */ }
     }
     data class State(
         val document: ParsedDocument?,
@@ -96,6 +99,10 @@ class RichMarkdownRenderModel(scope: CoroutineScope) {   // scope = main dispatc
 이전 document·images 유지, 아니면 비움; raster 설정만 바뀌면 document 유지·images 비움. worker: ParseCache 조회 → 파싱
 (append는 캐시 저장 안 함) → generation 확인 → 캐시된 raster로 1차 게시 → 누락 segment raster(각 단계 generation 확인) → 최종 게시.
 D3a: 파서 호출을 `try { … } catch (e: NoSuchMethodError | NoClassDefFoundError)`로 감싸 실패 시 document=null 유지(원문 fallback) + `Log.e`.
+
+수식 이미지 설정은 `fontSizePx`·`colorArgb`·`rastersDisplayMath`로 비교합니다. 개별 수식의
+`MathRenderKey`에는 여기에 LaTeX 원문과 해당 수식의 `isDisplay`를 넣습니다. 수식 서체를
+선택하는 값은 어느 비교에도 들어가지 않습니다.
 
 ## 4. RichMarkdownStreamingTextBuffer.kt
 

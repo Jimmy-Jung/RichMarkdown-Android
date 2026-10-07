@@ -50,6 +50,8 @@ import io.github.jimmyjung.richmarkdown.resolveTypeface
 import io.github.jimmyjung.richmarkdown.textSizePx
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -304,7 +306,7 @@ internal class BlockViewBuilder(
         var parts: CodeBlockParts? = null
         if (diagram != null) {
             // 다이어그램 높이는 렌더가 끝나야 정해진다. 셀 self-sizing을 다시 돌린다.
-            body = diagram.createView(context, code, theme, onSizeChange)
+            body = diagram.createView(context, code, theme, isDark, onSizeChange)
             body.setBackgroundColor(theme.codeBlockBackground.resolve(isDark))
         } else {
             val text = textView().apply {
@@ -361,20 +363,21 @@ internal class BlockViewBuilder(
                 Log.w(TAG, "하이라이트 실패: $language", e)
                 return@launch
             }
+            currentCoroutineContext().ensureActive()
             // 뷰가 재사용으로 다른 코드를 담고 있으면 늦게 온 색을 적용하지 않는다.
             if (highlights.isEmpty() || view.text.toString() != code) return@launch
             val spannable = SpannableString(code)
-            for (span in highlights) {
-                val start = span.range.start.coerceIn(0, code.length)
-                val end = span.range.end.coerceIn(start, code.length)
-                if (end > start) {
-                    spannable.setSpan(
-                        ForegroundColorSpan(colors.color(span.kind).resolve(isDark)),
-                        start,
-                        end,
-                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
-                    )
-                }
+            var cursor = 0
+            for (span in highlights.sortedBy { it.range.start }) {
+                val range = span.range
+                if (range.start < cursor || range.isEmpty || range.end > code.length) continue
+                spannable.setSpan(
+                    ForegroundColorSpan(colors.color(span.kind).resolve(isDark)),
+                    range.start,
+                    range.end,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+                )
+                cursor = range.end
             }
             view.text = spannable
         }
@@ -409,7 +412,6 @@ internal class BlockViewBuilder(
 
         val key = MathRenderKey(
             latex = segment.latex,
-            mathFont = theme.mathFont,
             fontSizePx = bodyPx,
             colorArgb = textColor,
             isDisplay = segment.kind.isDisplay,

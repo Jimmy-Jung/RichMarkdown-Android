@@ -44,7 +44,7 @@ class RenderModelLogicTest {
     )
 
     private fun key(latex: String, fontSizePx: Float) =
-        MathRenderKey(latex, LatexMathFont.KaTeX, fontSizePx, 0xFF000000.toInt(), isDisplay = false)
+        MathRenderKey(latex, fontSizePx, 0xFF000000.toInt(), isDisplay = false)
 
     // MARK: - ParseIdentity.isStreamingPrefix
 

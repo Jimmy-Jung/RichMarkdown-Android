@@ -8,10 +8,13 @@ import androidx.test.platform.app.InstrumentationRegistry
 import io.github.jimmyjung.richmarkdown.RichMarkdownHighlightKind
 import io.github.jimmyjung.richmarkdown.RichMarkdownHighlightSpan
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -194,5 +197,35 @@ class PrismHighlighterTest {
         }
         assertTrue(expected.isNotEmpty())
         results.forEach { assertEquals(expected, it) }
+    }
+
+    @Test
+    fun `release와_대기_호출이_경합해도_원문과_다음_호출이_유지된다`() = runBlocking {
+        val code = "val value: String = \"한글 🎯\" // comment\n".repeat(256)
+        val expected = highlighter.spans(code, "kotlin")
+        assertTrue(expected.isNotEmpty())
+        repeat(4) {
+            val start = CompletableDeferred<Unit>()
+            coroutineScope {
+                val pending = List(8) {
+                    async(Dispatchers.Default) {
+                        start.await()
+                        highlighter.spans(code, "kotlin")
+                    }
+                }
+                val release = launch(Dispatchers.Default) {
+                    start.await()
+                    repeat(8) {
+                        highlighter.release()
+                        yield()
+                    }
+                }
+                start.complete(Unit)
+                pending.awaitAll().forEach { assertEquals(expected, it) }
+                release.join()
+            }
+            highlighter.release()
+            assertEquals(expected, highlighter.spans(code, "kotlin"))
+        }
     }
 }

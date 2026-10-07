@@ -26,6 +26,12 @@ public object InputLimits {
 
     public data class BoundedInput(val text: String, val wasTruncated: Boolean)
 
+    /** 직접 생성된 값도 검사하고, 이전 ingress에서 기록한 잘림 상태를 보존한다. */
+    public fun bound(input: BoundedInput): BoundedInput {
+        val checked = bound(input.text)
+        return checked.copy(wasTruncated = input.wasTruncated || checked.wasTruncated)
+    }
+
     /** 상한 초과 입력을 grapheme 경계의 bounded prefix + 명시적 생략 marker로 바꾼다. */
     public fun bound(input: String): BoundedInput {
         val byteBounded = boundUtf8Bytes(input)

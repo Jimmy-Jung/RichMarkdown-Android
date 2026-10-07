@@ -1,0 +1,2 @@
+# 생성된 vendor bundle의 template literal 공백을 재포맷하지 않습니다.
+richmarkdown-mermaid/src/main/assets/mermaid/mermaid.bundle.js -whitespace

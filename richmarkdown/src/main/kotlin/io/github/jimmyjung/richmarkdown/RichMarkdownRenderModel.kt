@@ -55,7 +55,6 @@ class RichMarkdownRenderModel(scope: CoroutineScope) {
         val dollarMath: LatexDollarMathOptions,
         val fontSizePx: Float,
         @ColorInt val colorArgb: Int,
-        val mathFont: LatexMathFont = LatexMathFont.KaTeX,
         /**
          * 블록(display) 수식 raster가 필요한가. View 렌더러는 블록 수식을 벡터로 그리므로 false를
          * 보낸다 — 아무도 읽지 않는 raster를 만들지 않는다. 인라인 수식 raster에는 영향이 없다.
@@ -67,14 +66,13 @@ class RichMarkdownRenderModel(scope: CoroutineScope) {
         val parseIdentity: ParseIdentity get() = ParseIdentity(markdown, dollarMath, wasTruncated)
 
         /**
-         * markdown/파싱 조건을 제외한 raster 설정(크기·색·서체)이 같은가.
+         * markdown/파싱 조건을 제외한 raster 설정(크기·색)이 같은가.
          * 스트리밍 append로 문서가 stale인 동안 이전 이미지를 계속 써도 되는지 판정한다 —
          * 수식 raster key는 latex source 기준이라 문서 안 위치와 무관하다.
          */
         fun matchesRasterConfiguration(other: Request): Boolean =
             fontSizePx == other.fontSizePx &&
                 colorArgb == other.colorArgb &&
-                mathFont == other.mathFont &&
                 rastersDisplayMath == other.rastersDisplayMath
 
         companion object {
@@ -84,14 +82,12 @@ class RichMarkdownRenderModel(scope: CoroutineScope) {
                 dollarMath: LatexDollarMathOptions,
                 fontSizePx: Float,
                 @ColorInt colorArgb: Int,
-                mathFont: LatexMathFont = LatexMathFont.KaTeX,
                 rastersDisplayMath: Boolean = true,
             ): Request = Request(
                 boundedInput = InputLimits.bound(markdown),
                 dollarMath = dollarMath,
                 fontSizePx = fontSizePx,
                 colorArgb = colorArgb,
-                mathFont = mathFont,
                 rastersDisplayMath = rastersDisplayMath,
             )
         }
@@ -128,11 +124,9 @@ class RichMarkdownRenderModel(scope: CoroutineScope) {
     @Volatile
     private var generation = 0
 
-    @Volatile
-    private var completedGeneration = 0
     private var lastRequest: Request? = null
 
-    private val worker = CoalescingWorker<Job>(scope) { job -> process(job) }
+    private val worker = CoalescingWorker<Job>(scope) { job -> runJob(job) }
 
     /**
      * 같은 요청 재제출은 무시한다. 컴포저블 재구성·뷰 재바인딩은 같은 값으로 다시 올 수 있다 —
@@ -141,12 +135,14 @@ class RichMarkdownRenderModel(scope: CoroutineScope) {
     @MainThread
     fun submit(request: Request) {
         check(Looper.getMainLooper().isCurrentThread) { "submit은 main 스레드에서만 호출한다" }
-        if (request == lastRequest) return
+        // 직접 생성한 Request도 fallback·cache·worker에 보관하기 전에 같은 상한을 적용한다.
+        val canonical = request.copy(boundedInput = InputLimits.bound(request.boundedInput))
+        if (canonical == lastRequest) return
         val previous = lastRequest
-        val parseIdentityChanged = request.parseIdentity != previous?.parseIdentity
+        val parseIdentityChanged = canonical.parseIdentity != previous?.parseIdentity
         val isStreamingAppend = parseIdentityChanged &&
-            _state.value.parseIdentity?.isStreamingPrefix(request.parseIdentity) == true
-        lastRequest = request
+            _state.value.parseIdentity?.isStreamingPrefix(canonical.parseIdentity) == true
+        lastRequest = canonical
         generation += 1
 
         // Markdown/dollar parsing 조건이 바뀌면 cache 결과가 게시되기 전에는 이전 문서를
@@ -158,8 +154,8 @@ class RichMarkdownRenderModel(scope: CoroutineScope) {
         val current = _state.value
         _state.value = when {
             parseIdentityChanged && !isStreamingAppend ->
-                State(null, null, emptyMap(), null, request.markdown)
-            parseIdentityChanged -> current.copy(fallbackMarkdown = request.markdown)
+                State(null, null, emptyMap(), null, canonical.markdown)
+            parseIdentityChanged -> current.copy(fallbackMarkdown = canonical.markdown)
             // 수식 설정만 바뀐 경우: parsed document는 유지하고 이미지만 무효화한다.
             else -> current.copy(mathImages = emptyMap(), imageRequest = null)
         }
@@ -170,22 +166,17 @@ class RichMarkdownRenderModel(scope: CoroutineScope) {
         //
         // generation high-water mark는 worker lock 안에서 판정한다 — 늦게 도착한 이전 job이
         // 최신 pending을 덮지 못한다.
-        worker.submit(Job(generation, request, isStreamingAppend), generation)
+        worker.submit(Job(generation, canonical, isStreamingAppend), generation)
     }
 
-    /** 입력 종료 후 idle 검증용 (테스트). 마지막으로 제출된 generation의 처리가 끝나면 false. */
+    /** 입력 종료 후 idle 검증용. 취소·실패 cleanup 뒤에도 실제 worker 상태를 따른다. */
     val hasOutstandingWork: Boolean
-        get() = completedGeneration < generation
+        get() = worker.hasOutstandingWork
 
     /** 실행 중·대기 중인 작업이 모두 끝날 때까지 기다린다. */
     suspend fun awaitIdle() = worker.awaitIdle()
 
     private fun isCurrent(generation: Int): Boolean = generation == this.generation
-
-    private suspend fun process(job: Job) {
-        runJob(job)
-        onMain { completedGeneration = maxOf(completedGeneration, job.generation) }
-    }
 
     /**
      * CPU 작업은 전부 [Dispatchers.Default]에서, 게시와 cache 삽입만 main으로 hop한다
@@ -288,7 +279,6 @@ class RichMarkdownRenderModel(scope: CoroutineScope) {
 
         fun renderKey(segment: MathSegment, request: Request): MathRenderKey = MathRenderKey(
             latex = segment.latex,
-            mathFont = request.mathFont,
             fontSizePx = request.fontSizePx,
             colorArgb = request.colorArgb,
             isDisplay = segment.kind.isDisplay,

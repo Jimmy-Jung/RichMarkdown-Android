@@ -154,4 +154,17 @@ class RichMarkdownParserTest {
         assertFalse(InputLimits.bound("```\n$deep\n```").wasTruncated, "fenced code 안의 `>`는 quote가 아니다")
         assertNull(RichMarkdownParser.parse("정상\n$deep").blocks.firstOrNull { it is ParsedBlock.BlockQuote })
     }
+
+    @Test
+    fun directlyConstructedBoundedInputCannotBypassLimits() {
+        val oversized = "a".repeat(InputLimits.MAX_INPUT_UTF8_BYTES + 1)
+        val deep = "정상\n" + ">".repeat(InputLimits.MAX_BLOCK_QUOTE_DEPTH + 1) + " 깊다"
+        for (source in listOf(oversized, deep)) {
+            val direct = RichMarkdownParser.parse(InputLimits.BoundedInput(source, false), DollarMathOptions.None)
+            assertTrue(direct.wasTruncated)
+            assertEquals(RichMarkdownParser.parse(source), direct)
+        }
+        val alreadyTruncated = InputLimits.BoundedInput("안전한 표시 원문", true)
+        assertTrue(RichMarkdownParser.parse(alreadyTruncated, DollarMathOptions.None).wasTruncated)
+    }
 }

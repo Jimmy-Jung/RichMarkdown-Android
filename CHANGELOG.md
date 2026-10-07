@@ -9,6 +9,31 @@ semver다. `0.x`에서는 minor 버전에서도 공개 API가 바뀔 수 있다.
 
 - Maven Central 실제 발행(사용자 승인), commonmark-java upstream PR(D3a ③).
 
+## [0.2.0] - 2026-10-07
+
+### Fixed
+
+- 직접 `BoundedInput`·`Request` 생성의 입력 제한 우회를 막고 시작 전/실행 중 취소에서도 worker idle 상태를 해제한다.
+- Compose의 코드 색·수식 vector 결과를 요청별 state로 분리하고 View 하이라이트의 범위 밖·겹침 입력을 안전하게 제외한다.
+- native diagram의 영구 교체·제거에서 기존 공급자에게 dispose를 전달한다. 일반 detach/reuse는 구분한다.
+- Mermaid의 최신 request ID·JS staging·deadline·취소 후 페이지 복구·명시 dark 전달·WebView 생성 실패·영구 폐기·bounded fallback을 보완한다.
+- Mermaid HTML/sanitizer 설정 잠금과 CSP bootstrap hash로 inline 이벤트를 제한하고, 전이 의존성 DOMPurify 3.4.16·JavaScript KaTeX 0.18.2 patch 번들을 공유한다.
+
+### Added
+
+- Core·모델·Compose·View·native 엔진의 입력/수명 회귀와 모듈별 architecture·spec·ADR·개선 기록을 추가한다.
+- diagram 공급자에 기본 구현을 가진 dark 전달 overload와 `disposeView`를 추가한다. 기존 공급자 소스는 기존 메서드를 계속 구현할 수 있다.
+
+### Removed
+
+- 선택지가 하나뿐인 `LatexMathFont`와 `RichMarkdownTheme.mathFont`, `RichMarkdownRenderModel.Request`·`Request.of`·`MathRenderKey`의 `mathFont` 인자를 제거한다. 수식은 RaTeX의 KaTeX 서체를 자동으로 사용한다.
+
+### Compatibility
+
+- 네 artifact와 선언된 minSdk 30은 유지한다. 버전은 iOS 0.9.0과 독립된 Android 0.2.0이다.
+- native RaTeX 0.1.14는 유지하며 최초 Maven Central 발행은 이번 GitHub Release 배포와 구분한다.
+- 0.1.0에서 옮길 때 기존 `mathFont` 인자와 `LatexMathFont` import를 삭제한다. 해당 프로퍼티·생성자·자동 생성되는 `copy` 등도 바뀌므로 소비 라이브러리를 다시 컴파일한다. 수식 크기·색·정렬·비트맵/벡터 표시 방식은 유지한다.
+
 ## [0.1.0] - 2026-10-06
 
 ### Added
@@ -64,5 +89,6 @@ semver다. `0.x`에서는 minor 버전에서도 공개 API가 바뀔 수 있다.
   parse 전에는 4 KiB 원문과 1–1024 px 폰트만 검사하고, parse 후 실제 layout 크기로
   각 변 8192 px·4,194,304 pixel을 raster·벡터 공통 경계에서 제한한다.
 
-[Unreleased]: https://github.com/Jimmy-Jung/RichMarkdown-Android/compare/0.1.0...HEAD
+[Unreleased]: https://github.com/Jimmy-Jung/RichMarkdown-Android/compare/0.2.0...HEAD
+[0.2.0]: https://github.com/Jimmy-Jung/RichMarkdown-Android/releases/tag/0.2.0
 [0.1.0]: https://github.com/Jimmy-Jung/RichMarkdown-Android/releases/tag/0.1.0

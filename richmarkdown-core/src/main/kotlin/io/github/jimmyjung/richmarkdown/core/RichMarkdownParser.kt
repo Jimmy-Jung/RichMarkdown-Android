@@ -56,13 +56,15 @@ public object RichMarkdownParser {
     private val markdownRenderer: MarkdownRenderer = MarkdownRenderer.builder().extensions(extensions).build()
 
     public fun parse(markdown: String, dollarMath: DollarMathOptions = DollarMathOptions.None): ParsedDocument =
-        parse(InputLimits.bound(markdown), dollarMath)
+        parseBounded(InputLimits.bound(markdown), dollarMath)
 
     /**
-     * UI ingress에서 한 번 제한한 입력을 재검사 없이 파싱한다.
-     * `wasTruncated`는 원문 제한 상태이므로 결과에 그대로 보존한다.
+     * 직접 생성된 BoundedInput도 제한한다. 이전 `wasTruncated` 상태는 결과에 보존한다.
      */
-    public fun parse(bounded: InputLimits.BoundedInput, dollarMath: DollarMathOptions): ParsedDocument {
+    public fun parse(bounded: InputLimits.BoundedInput, dollarMath: DollarMathOptions): ParsedDocument =
+        parseBounded(InputLimits.bound(bounded), dollarMath)
+
+    private fun parseBounded(bounded: InputLimits.BoundedInput, dollarMath: DollarMathOptions): ParsedDocument {
         val text = bounded.text
         val scan = scanMath(text, dollarMath)
 

@@ -7,6 +7,7 @@ import android.os.SystemClock
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.RenderProcessGoneDetail
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -94,7 +95,10 @@ class MermaidDiagramViewTest {
         val status = onMain { view.statusText.text.toString() }
         assertTrue(status, status.contains("상한 ${MermaidWebRenderer.MAX_SOURCE_UTF8_BYTES}바이트"))
         assertFalse("크기 검사는 로드 전에 끝나야 한다", onMain { view.renderer.hasLoadStarted })
-        assertEquals(source, onMain { view.sourceText.text.toString() })
+        val shown = onMain { view.sourceText.text.toString() }
+        assertTrue("실패 표시의 원문은 제한된 앞부분만 측정해야 한다", shown.length <= MermaidWebRenderer.MAX_SOURCE_UTF8_BYTES + 100)
+        assertTrue(source.startsWith(shown.substringBefore("\n…")))
+        assertTrue(shown.contains("생략"))
     }
 
     @Test
@@ -132,6 +136,148 @@ class MermaidDiagramViewTest {
     }
 
     // MARK: - RichMarkdown 확장점 연결
+
+    @Test
+    fun WebView_생성_실패는_원문으로_되돌린다() {
+        lateinit var view: MermaidDiagramView
+        activityRule.scenario.onActivity { activity ->
+            view = MermaidDiagramView(activity) { throw IllegalStateException("WebView unavailable") }
+            view.source = "flowchart LR; A-->B"
+        }
+        attach(view)
+        awaitRender(view, previous = null)
+        assertEquals(View.VISIBLE, onMain { view.fallback.visibility })
+        assertEquals(view.source, onMain { view.sourceText.text.toString() })
+    }
+
+    @Test
+    fun 최종_폐기는_진행_작업과_WebView를_종료한다() {
+        val view = newView("flowchart LR; A-->B")
+        attach(view)
+        awaitRender(view, previous = null)
+        onMain { view.dispose() }
+        assertTrue(onMain { view.renderer.isDead })
+        assertEquals(0, onMain { view.childCount })
+        onMain { view.dispose() }
+    }
+
+    @Test
+    fun adapter는_부모의_explicit_dark를_전달한다() {
+        val view = onMain {
+            MermaidDiagramRenderer.shared.createView(context, "flowchart LR; A-->B", io.github.jimmyjung.richmarkdown.RichMarkdownTheme.Default, true) {} as MermaidDiagramView
+        }
+        assertTrue(onMain { view.isDark })
+        onMain { view.dispose() }
+    }
+
+    @Test
+    fun 과대_한글과_emoji_실패_표시도_UTF8_상한과_원문을_보존한다() {
+        for (unit in listOf("가", "👩‍💻")) {
+            val source = unit.repeat(10_000)
+            val view = newView(source)
+            attach(view)
+            awaitRender(view, previous = null)
+            val shown = onMain { view.sourceText.text.toString() }
+            val prefix = shown.substringBefore("\n…")
+            assertTrue(prefix.toByteArray(Charsets.UTF_8).size <= MermaidWebRenderer.MAX_SOURCE_UTF8_BYTES)
+            assertTrue(source.startsWith(prefix))
+            assertEquals(source, onMain { view.source })
+            assertTrue(shown.contains("생략"))
+            onMain { view.dispose() }
+        }
+    }
+
+    @Test
+    fun 성공한_뷰는_독립적인_프로세스_종료_두_번에서도_복구한다() {
+        val view = newView("flowchart LR; A-->B")
+        attach(view)
+        awaitRender(view, previous = null)
+        repeat(2) {
+            val previous = onMain { view.renderJob }
+            onMain {
+                val renderer = view.renderer
+                renderer.webView.webViewClient.onRenderProcessGone(renderer.webView, object : RenderProcessGoneDetail() {
+                    override fun didCrash(): Boolean = true
+                    override fun rendererPriorityAtExit(): Int = 0
+                })
+            }
+            awaitRender(view, previous)
+            assertEquals(View.GONE, onMain { view.fallback.visibility })
+            assertEquals(1f, onMain { view.renderer.webView.alpha }, 0f)
+        }
+        onMain { view.dispose() }
+    }
+
+    @Test
+    fun 원문_교체는_이전_그림을_즉시_가리고_멈춘_JS_취소_뒤에도_복구한다() {
+        val view = newView("flowchart LR; A-->B")
+        attach(view)
+        awaitRender(view, previous = null)
+        evaluate(view, "(window.renderDiagram = () => { window.hungStarted = true; return new Promise(() => {}); }, true)")
+        val previous = onMain { view.renderJob }
+        onMain { view.source = "flowchart LR; C-->D" }
+        assertEquals(0f, onMain { view.renderer.webView.alpha }, 0f)
+        runBlocking {
+            withTimeout(5_000) {
+                while (evaluate(view, "window.hungStarted === true") != "true") delay(10)
+            }
+        }
+        val hung = onMain { view.renderJob }
+        assertTrue(hung !== previous)
+        onMain { view.source = "flowchart LR; E-->F" }
+        assertEquals(0f, onMain { view.renderer.webView.alpha }, 0f)
+        awaitRender(view, previous = hung)
+        assertEquals(View.GONE, onMain { view.fallback.visibility })
+        assertEquals(1f, onMain { view.renderer.webView.alpha }, 0f)
+        onMain { view.dispose() }
+    }
+
+    @Test
+    fun directive와_frontmatter는_HTML과_sanitizer를_완화하거나_이벤트를_실행하지_못한다() {
+        val graph = "flowchart LR\nA[\"<img src=x onerror=window.injected=true>\"] --> B[\"');window.injected=true;//\"]"
+        val sources = listOf(
+            "%%{init: {\"securityLevel\":\"loose\",\"htmlLabels\":true,\"flowchart\":{\"htmlLabels\":true},\"dompurifyConfig\":{\"ADD_ATTR\":[\"onerror\"]}}}%%\n$graph",
+            "---\nconfig:\n  securityLevel: loose\n  htmlLabels: true\n  flowchart:\n    htmlLabels: true\n  dompurifyConfig:\n    ADD_ATTR: [onerror]\n---\n$graph",
+        )
+        for (source in sources) {
+            val view = newView(source)
+            attach(view)
+            awaitRender(view, previous = null)
+            assertEquals(View.GONE, onMain { view.fallback.visibility })
+            assertEquals("true", evaluate(view, "!!document.querySelector('#diagram svg')"))
+            assertEquals("false", evaluate(view, "window.injected === true"))
+            assertEquals("strict", evaluate(view, "mermaid.mermaidAPI.getConfig().securityLevel"))
+            assertEquals("false", evaluate(view, "mermaid.mermaidAPI.getConfig().htmlLabels"))
+            assertEquals("false", evaluate(view, "mermaid.mermaidAPI.getConfig().flowchart.htmlLabels"))
+            assertEquals("false", evaluate(view, "!!mermaid.mermaidAPI.getConfig().dompurifyConfig?.ADD_ATTR?.includes('onerror')"))
+            onMain { view.dispose() }
+        }
+    }
+
+    @Test
+    fun CSP는_inline_event_handler를_별도로_차단한다() {
+        val view = newView("flowchart LR; A-->B")
+        attach(view)
+        awaitRender(view, previous = null)
+        evaluate(view, """
+            (function() {
+                window.cspProbe = false; window.cspProbeFinished = false;
+                const image = new Image();
+                image.setAttribute('onerror', 'window.cspProbe = true');
+                image.addEventListener('error', () => { window.cspProbeFinished = true; image.remove(); }, {once: true});
+                image.src = 'data:image/png;base64,invalid';
+                document.body.appendChild(image);
+                return true;
+            })()
+        """.trimIndent())
+        runBlocking {
+            withTimeout(5_000) {
+                while (evaluate(view, "window.cspProbeFinished === true") != "true") delay(10)
+            }
+        }
+        assertEquals("false", evaluate(view, "window.cspProbe"))
+        onMain { view.dispose() }
+    }
 
     @Test
     fun 렌더러는_mermaid_언어만_담당하고_옵션은_인스턴스로_비교한다() {

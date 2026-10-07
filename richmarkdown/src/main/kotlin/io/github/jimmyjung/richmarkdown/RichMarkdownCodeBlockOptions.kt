@@ -100,7 +100,26 @@ interface RichMarkdownDiagramRendering {
         onSizeChange: () -> Unit,
     ): View
 
+    /** 부모가 해석한 dark 값을 전달한다. 기존 공급자는 기존 overload로 호환된다. */
+    fun createView(
+        context: Context,
+        source: String,
+        theme: RichMarkdownTheme,
+        isDark: Boolean,
+        onSizeChange: () -> Unit,
+    ): View = createView(context, source, theme, onSizeChange)
+
+    /**
+     * 영구 폐기되는 block subtree의 View마다 호출된다. 공급자가 만든 View만 해제하고
+     * 다른 container·텍스트 View는 무시한다. 일시 detach·fallback·재사용에는 호출하지 않는다.
+     */
+    fun disposeView(view: View) {}
+
     /** Compose 렌더러용. */
     @Composable
     fun Content(source: String, theme: RichMarkdownTheme)
+
+    /** Compose 부모의 명시 dark 설정을 전달하는 호환 overload. */
+    @Composable
+    fun Content(source: String, theme: RichMarkdownTheme, isDark: Boolean) = Content(source, theme)
 }

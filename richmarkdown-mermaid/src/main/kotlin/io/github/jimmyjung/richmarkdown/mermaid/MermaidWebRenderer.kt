@@ -18,6 +18,7 @@ import androidx.webkit.WebResourceErrorCompat
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewClientCompat
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withContext
@@ -47,13 +48,17 @@ class MermaidWebRenderer(context: Context) {
         private set
 
     private var isLoaded = false
+    private var isDestroyed = false
     private var loadDeferred: CompletableDeferred<Unit>? = null
+    private var loadSerial = 0
+    private var loadUrl: String? = null
 
     /** 테스트 확인용: 크기 검사가 로드보다 먼저 끝났는지. */
     internal val hasLoadStarted: Boolean get() = isLoaded || loadDeferred != null
     private var serial = 0
     private val pending = ConcurrentHashMap<Int, CompletableDeferred<JSONObject>>()
     private val bridge = Bridge()
+    internal var onContentProcessTermination: (() -> Unit)? = null
 
     init {
         val loader = WebViewAssetLoader.Builder()
@@ -92,14 +97,22 @@ class MermaidWebRenderer(context: Context) {
             val bytes = source.toByteArray(Charsets.UTF_8).size
             if (bytes > MAX_SOURCE_UTF8_BYTES) throw MermaidError.SourceTooLarge(bytes, MAX_SOURCE_UTF8_BYTES)
             if (isDead) throw MermaidError.WebContentTerminated
+            if (!fontSizePx.isFinite() || fontSizePx <= 0) throw MermaidError.InvalidSize
+
+            val id = ++serial
+            if (pending.isNotEmpty()) isLoaded = false
+            pending.values.forEach { it.completeExceptionally(CancellationException("이전 Mermaid 요청이 취소되었습니다.")) }
+            pending.clear()
 
             val density = webView.resources.displayMetrics.density
             val safeWidthDp = floor(widthPx / density).coerceIn(120f, 2_000f)
             val fontSizeDp = fontSizePx / density
 
             loadIfNeeded()
+            if (isDead) throw MermaidError.WebContentTerminated
+            if (id != serial) throw CancellationException("이전 Mermaid 요청이 취소되었습니다.")
 
-            val result = evaluateRender(source, dark, safeWidthDp, fontSizeDp)
+            val result = evaluateRender(id, source, dark, safeWidthDp, fontSizeDp)
             val heightDp = result.optDouble("height", Double.NaN)
             if (!heightDp.isFinite() || heightDp <= 0 || heightDp > MAX_HEIGHT_DP) throw MermaidError.InvalidSize
 
@@ -109,7 +122,19 @@ class MermaidWebRenderer(context: Context) {
     /** 렌더러 프로세스 종료 뒤 교체할 때만 부른다. 이후 이 인스턴스는 쓰지 않는다. */
     @MainThread
     fun destroy() {
+        if (isDestroyed) return
+        isDestroyed = true
+        onContentProcessTermination = null
         isDead = true
+        isLoaded = false
+        val error = CancellationException("Mermaid 렌더러가 폐기되었습니다.")
+        finishLoading(error)
+        loadDeferred = null
+        loadUrl = null
+        pending.values.forEach { it.completeExceptionally(error) }
+        pending.clear()
+        webView.stopLoading()
+        webView.removeJavascriptInterface(BRIDGE_NAME)
         webView.destroy()
     }
 
@@ -119,7 +144,8 @@ class MermaidWebRenderer(context: Context) {
         if (isLoaded) return
         val deferred = loadDeferred ?: CompletableDeferred<Unit>().also {
             loadDeferred = it
-            webView.loadUrl(INDEX_URL)
+            loadUrl = "$INDEX_URL?load=${++loadSerial}"
+            webView.loadUrl(checkNotNull(loadUrl))
         }
         try {
             withTimeout(TIMEOUT_MS) { deferred.await() }
@@ -128,7 +154,10 @@ class MermaidWebRenderer(context: Context) {
             throw MermaidError.LoadTimeout
         } finally {
             // 실패한 로드는 버린다. 다음 render가 loadUrl을 다시 부른다 (iOS finishLoading 뒤 재시도와 같다).
-            if (deferred.isCompleted && loadDeferred === deferred) loadDeferred = null
+            if (deferred.isCompleted && loadDeferred === deferred) {
+                loadDeferred = null
+                loadUrl = null
+            }
         }
     }
 
@@ -143,28 +172,31 @@ class MermaidWebRenderer(context: Context) {
 
     // MARK: - renderDiagram 호출
 
-    private suspend fun evaluateRender(source: String, dark: Boolean, widthDp: Float, fontSizeDp: Float): JSONObject {
-        val id = ++serial
+    private suspend fun evaluateRender(id: Int, source: String, dark: Boolean, widthDp: Float, fontSizeDp: Float): JSONObject {
         val deferred = CompletableDeferred<JSONObject>()
         pending[id] = deferred
         // 원문은 JSONObject.quote로 문자열 리터럴이 되어 인자로만 들어간다. renderDiagram이 없으면(페이지 손상) sync 예외로 알린다.
         val script = """
             (function () {
               try {
-                window.renderDiagram(${JSONObject.quote(source)}, $dark, $widthDp, $fontSizeDp).then(
+                window.renderDiagram(${JSONObject.quote(source)}, $dark, $widthDp, $fontSizeDp, $id).then(
                   function (r) { $BRIDGE_NAME.onResult($id, JSON.stringify(r)); },
                   function (e) { $BRIDGE_NAME.onError($id, String(e && e.message || e)); });
               } catch (e) { $BRIDGE_NAME.onError($id, String(e && e.message || e)); }
             })();
         """.trimIndent()
         webView.evaluateJavascript(script, null)
+        var succeeded = false
         return try {
-            withTimeout(TIMEOUT_MS) { deferred.await() }
+            withTimeout(TIMEOUT_MS) { deferred.await() }.also { succeeded = true }
         } catch (e: TimeoutCancellationException) {
-            // iOS callAsyncJavaScript에는 timeout이 없다. Android는 rAF가 멈추는 경우가 있어 load와 같은 상한을 건다.
+            // 완료되지 않는 JS queue는 다음 요청에서 페이지를 다시 로드해 버린다.
+            if (id == serial) isLoaded = false
             throw MermaidError.RenderFailed("Mermaid 렌더 응답이 ${TIMEOUT_MS / 1_000}초 안에 오지 않았습니다.")
         } finally {
             pending.remove(id)
+            if (!succeeded && id == serial) isLoaded = false
+            if (!succeeded && !isDead) webView.evaluateJavascript("window.cancelDiagram && window.cancelDiagram($id)", null)
         }
     }
 
@@ -191,15 +223,17 @@ class MermaidWebRenderer(context: Context) {
         /** loadUrl로 시작한 최초 로드에는 호출되지 않는다. 다이어그램 안의 링크·외부 이동은 전부 막는다. */
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = true
 
-        override fun onPageFinished(view: WebView, url: String) = finishLoading(null)
+        override fun onPageFinished(view: WebView, url: String) {
+            if (url == loadUrl) finishLoading(null)
+        }
 
         override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceErrorCompat) {
-            if (request.isForMainFrame) finishLoading(MermaidError.ResourceMissing)
+            if (request.isForMainFrame && request.url.toString() == loadUrl) finishLoading(MermaidError.ResourceMissing)
         }
 
         /** assets에 index.html이 없으면 AssetLoader가 404를 돌려주고 onPageFinished도 온다. 먼저 실패로 확정한다. */
         override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, errorResponse: WebResourceResponse) {
-            if (request.isForMainFrame) finishLoading(MermaidError.ResourceMissing)
+            if (request.isForMainFrame && request.url.toString() == loadUrl) finishLoading(MermaidError.ResourceMissing)
         }
 
         /** iOS `webViewWebContentProcessDidTerminate`. true를 돌려 앱 종료를 막고, 호출자가 WebView를 새로 만든다. */
@@ -210,6 +244,7 @@ class MermaidWebRenderer(context: Context) {
             loadDeferred = null
             pending.values.forEach { it.completeExceptionally(MermaidError.WebContentTerminated) }
             pending.clear()
+            onContentProcessTermination?.invoke()
             return true
         }
     }

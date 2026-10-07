@@ -65,13 +65,12 @@ fun RichMarkdown(
     val colorArgb = theme.textColor.resolve(isDarkTheme)
     // 요청을 한 번만 canonicalize한다 (InputLimits.bound). body와 submit이 같은 값을 써야
     // 대형 원문의 bounded fallback에서 이전 문서가 한 프레임 되살아나지 않는다.
-    val request = remember(markdown, dollarMath, fontSizePx, colorArgb, theme.mathFont) {
+    val request = remember(markdown, dollarMath, fontSizePx, colorArgb) {
         RichMarkdownRenderModel.Request.of(
             markdown = markdown,
             dollarMath = dollarMath,
             fontSizePx = fontSizePx,
             colorArgb = colorArgb,
-            mathFont = theme.mathFont,
             // 블록 수식은 벡터 레이아웃으로 그리므로 display raster는 만들지 않는다.
             rastersDisplayMath = false,
         )

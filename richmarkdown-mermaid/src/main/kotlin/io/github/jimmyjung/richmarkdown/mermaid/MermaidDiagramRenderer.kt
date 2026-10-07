@@ -33,7 +33,11 @@ class MermaidDiagramRenderer private constructor() : RichMarkdownDiagramRenderin
 
     override val languages: Set<String> = setOf("mermaid")
 
-    /** 다크 여부는 뷰가 `uiMode`에서 읽는다 (인터페이스에 isDark가 없다). */
+    override fun disposeView(view: View) {
+        (view as? MermaidDiagramView)?.dispose()
+    }
+
+    /** 기존 호출은 시스템 다크를 사용한다. 상위 렌더러는 explicit dark overload를 호출한다. */
     override fun createView(
         context: Context,
         source: String,
@@ -45,13 +49,27 @@ class MermaidDiagramRenderer private constructor() : RichMarkdownDiagramRenderin
         view.onSizeChange = onSizeChange
     }
 
+    override fun createView(
+        context: Context,
+        source: String,
+        theme: RichMarkdownTheme,
+        isDark: Boolean,
+        onSizeChange: () -> Unit,
+    ): View = (createView(context, source, theme, onSizeChange) as MermaidDiagramView).also { view ->
+        view.isDark = isDark
+    }
+
     /**
      * `AndroidView`는 렌더 뒤의 높이 변화를 따라오지 않는다 (iOS `UIViewRepresentable` §3.6와 같다).
      * `onSizeChange`로 올라온 높이를 state로 들어 `Modifier.height`에 건다.
      */
     @Composable
     override fun Content(source: String, theme: RichMarkdownTheme) {
-        val isDark = isSystemInDarkTheme()
+        Content(source, theme, isSystemInDarkTheme())
+    }
+
+    @Composable
+    override fun Content(source: String, theme: RichMarkdownTheme, isDark: Boolean) {
         val density = LocalDensity.current
         var heightPx by remember { mutableIntStateOf(0) }
         val height = if (heightPx > 0) with(density) { heightPx.toDp() } else MermaidDiagramView.PLACEHOLDER_HEIGHT_DP.dp
@@ -63,6 +81,8 @@ class MermaidDiagramRenderer private constructor() : RichMarkdownDiagramRenderin
                 }
             },
             modifier = Modifier.fillMaxWidth().height(height),
+            onReset = null,
+            onRelease = { view -> view.dispose() },
             update = { view ->
                 view.source = source
                 view.theme = theme

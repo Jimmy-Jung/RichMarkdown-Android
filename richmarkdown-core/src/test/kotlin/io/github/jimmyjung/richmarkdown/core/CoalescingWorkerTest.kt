@@ -4,11 +4,19 @@
 package io.github.jimmyjung.richmarkdown.core
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 import java.util.Collections
@@ -23,6 +31,77 @@ import kotlin.test.assertTrue
  * iOS `CoalescingWorkerTests`의 이식이다.
  */
 class CoalescingWorkerTest {
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun exceptionDropsPendingAndLiveScopeCanRestart() = runTest {
+        val errors = ArrayList<Throwable>()
+        val lifetime = SupervisorJob()
+        val scope = CoroutineScope(lifetime + StandardTestDispatcher(testScheduler) + CoroutineExceptionHandler { _, e -> errors.add(e) })
+        val gate = CompletableDeferred<Unit>()
+        val executed = ArrayList<Int>()
+        val worker = CoalescingWorker<Int>(scope) { value ->
+            executed.add(value)
+            if (value == 1) {
+                gate.await()
+                error("제어된 작업 실패")
+            }
+        }
+        try {
+            worker.submit(1)
+            runCurrent()
+            worker.submit(2)
+            gate.complete(Unit)
+            runCurrent()
+            worker.awaitIdle()
+            assertFalse(worker.hasOutstandingWork)
+            assertEquals(1, errors.size)
+            worker.submit(3)
+            worker.awaitIdle()
+            assertEquals(listOf(1, 3), executed)
+        } finally {
+            lifetime.cancel()
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun cancellationBeforeDrainStartsReleasesIdle() = runTest {
+        val lifetime = SupervisorJob()
+        val scope = CoroutineScope(lifetime + StandardTestDispatcher(testScheduler))
+        var calls = 0
+        val worker = CoalescingWorker<Int>(scope) { calls += 1 }
+        worker.submit(1)
+        lifetime.cancel()
+        runCurrent()
+        assertFalse(worker.hasOutstandingWork, "시작 전 취소도 pending과 idle을 정리한다")
+        worker.awaitIdle()
+        assertEquals(0, calls)
+        worker.submit(2)
+        runCurrent()
+        assertFalse(worker.hasOutstandingWork, "취소된 scope에 다시 제출해도 idle을 붙잡지 않는다")
+        assertEquals(0, calls)
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun cancellationDuringDrainDropsPending() = runTest {
+        val lifetime = SupervisorJob()
+        val scope = CoroutineScope(lifetime + StandardTestDispatcher(testScheduler))
+        val executed = ArrayList<Int>()
+        val worker = CoalescingWorker<Int>(scope) { value ->
+            executed.add(value)
+            awaitCancellation()
+        }
+        worker.submit(1)
+        runCurrent()
+        worker.submit(2)
+        lifetime.cancel()
+        runCurrent()
+        worker.awaitIdle()
+        assertFalse(worker.hasOutstandingWork)
+        assertEquals(listOf(1), executed)
+    }
 
     /** 실행 순서와 최대 동시 실행 수를 기록한다. 실제 스레드 테스트도 쓰므로 스레드 안전하게 둔다. */
     private class Recorder {

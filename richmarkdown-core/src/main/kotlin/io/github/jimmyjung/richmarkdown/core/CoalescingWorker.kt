@@ -4,6 +4,10 @@
 package io.github.jimmyjung.richmarkdown.core
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -38,7 +42,7 @@ public class CoalescingWorker<Input : Any>(
 
     public fun submit(input: Input) {
         val shouldStart = synchronized(lock) { enqueueLocked(input) }
-        if (shouldStart) scope.launch { drain() }
+        if (shouldStart) startDrain()
     }
 
     /**
@@ -52,7 +56,7 @@ public class CoalescingWorker<Input : Any>(
             latestGeneration = generation
             enqueueLocked(input)
         }
-        if (shouldStart) scope.launch { drain() }
+        if (shouldStart) startDrain()
     }
 
     /** 실행 중·대기 중인 작업이 모두 끝날 때까지 기다린다. */
@@ -69,10 +73,17 @@ public class CoalescingWorker<Input : Any>(
         return true
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
+    private fun startDrain() {
+        // 시작 전 취소에도 finally에 도달한다. drain은 첫 입력 실행 전에 취소를 확인한다.
+        scope.launch(start = CoroutineStart.ATOMIC) { drain() }
+    }
+
     private suspend fun drain() {
         var completedNormally = false
         try {
             while (true) {
+                currentCoroutineContext().ensureActive()
                 val next = takePending() ?: break
                 perform(next)
             }

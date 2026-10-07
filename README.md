@@ -3,14 +3,14 @@
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.4-7F52FF.svg)](https://kotlinlang.org)
 [![Android](https://img.shields.io/badge/Android-minSdk%2030-3DDC84.svg)](https://developer.android.com)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.0%20beta-yellow.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.2.0%20beta-yellow.svg)](CHANGELOG.md)
 
-> **0.1.0 beta** — Compose·View 렌더러, 코드 블록 확장 2종, 데모 앱, iOS와 같은 RaTeX 수식 엔진.
+> **0.2.0 beta** — Compose·View 렌더러, 코드 블록 확장 2종, 데모 앱, iOS와 같은 RaTeX 수식 엔진.
 > GitHub Release 태그로 배포하며 Maven Central에는 아직 발행하지 않았다. `0.x`에서는 minor 버전에도 공개 API가 바뀔 수 있다.
 > 변경 내역은 [CHANGELOG.md](CHANGELOG.md)를 본다.
 
-iOS [RichMarkdown](https://github.com/Jimmy-Jung/RichMarkdown)과 **동일한 렌더 계약**을 제공하는
-Android 라이브러리. LLM 채팅 메시지의 Markdown, GFM 표, 인라인/블록 LaTeX 수식, 코드 블록을
+iOS [RichMarkdown](https://github.com/Jimmy-Jung/RichMarkdown)과 **수식 문법·실패 처리·스트리밍 표시 규칙을 공유하는**
+Android 라이브러리. 플랫폼에 따라 API와 표시 구현이 다르며 모든 Swift·Kotlin API의 이름과 인자가 일대일로 같다는 뜻은 아니다. LLM 채팅 메시지의 Markdown, GFM 표, 인라인/블록 LaTeX 수식, 코드 블록을
 WebView 없이 네이티브로 렌더한다. Jetpack Compose는 `RichMarkdown()`, Android View는
 `RichMarkdownView`를 쓴다 — 두 렌더러는 같은 파서·수식 raster·캐시를 공유한다.
 
@@ -54,17 +54,17 @@ WebView 없이 네이티브로 렌더한다. Jetpack Compose는 `RichMarkdown()`
 로컬 시뮬레이션을 20Hz로 재생한 화면이다. 도착한 조각을 누적해 답변을 갱신하고,
 본문이 길어지면 하단을 따라간다. 스트리밍 중에는 전송 속도와 엔드포인트 변경을 막는다.
 
-## 설치 (예정)
+## 설치
 
-발행 전이다. 발행 뒤 좌표는 다음과 같다.
+Maven Central에는 아직 발행하지 않았다. 먼저 [GitHub Release의 Maven 저장소](#github-release의-maven-저장소) 안내에 따라 0.2.0 ZIP을 풀고 저장소를 추가한 뒤 다음 의존성을 사용한다.
 
 ```kotlin
 dependencies {
-    implementation("io.github.jimmy-jung:richmarkdown:<version>")
+    implementation("io.github.jimmy-jung:richmarkdown:0.2.0")
 
     // opt-in. 필요한 것만 추가한다.
-    implementation("io.github.jimmy-jung:richmarkdown-highlight:<version>") // Prism + QuickJS
-    implementation("io.github.jimmy-jung:richmarkdown-mermaid:<version>")   // 공식 Mermaid + WebView
+    implementation("io.github.jimmy-jung:richmarkdown-highlight:0.2.0") // Prism + QuickJS
+    implementation("io.github.jimmy-jung:richmarkdown-mermaid:0.2.0")   // 공식 Mermaid + WebView
 }
 ```
 
@@ -73,6 +73,18 @@ dependencies {
 파서 의존성 commonmark-java 0.30이 Android API 30부터 제공되는 `java.util.List.of`를 사용한다.
 따라서 minSdk는 30이며 API 30 미만 기기는 지원하지 않는다. 근거는
 [docs/upstream-commonmark-android-compat.md](docs/upstream-commonmark-android-compat.md).
+
+### 0.1.0 → 0.2.0 마이그레이션
+
+0.2.0에서는 효과가 없는 수식 서체 선택 API를 제거했다. `LatexMathFont`와
+`RichMarkdownTheme.mathFont`, `RichMarkdownRenderModel.Request.mathFont`,
+`MathRenderKey.mathFont`는 더 이상 제공하지 않는다. 기존 코드의 `mathFont` 인자를
+삭제하면 된다. 직접 호출한 `Request.of` 등의 생성 함수에서도 이 인자를 제거한다.
+`LatexMathFont` import와 변수·타입 참조도 삭제한 뒤, 0.2.0 의존성으로 앱과 소비 라이브러리를 다시 컴파일한다.
+
+수식은 RaTeX의 KaTeX 기반 내장 글꼴로 계속 표시된다. 크기를 정하는 `bodyFont`와
+`fontSizePx`, 내부 `mathFontSizePx`, 색·블록 수식 정렬 설정은 유지한다. `bodyFont`의
+서체 디자인을 바꾸어도 수식 서체를 바꾸지는 않는다. 실행·배포 상태는 [검수 기록](docs/report/validation.md)을 따른다.
 
 ## 사용법
 
@@ -90,7 +102,7 @@ fun MessageBubble(markdown: String) {
 | 파라미터 | 설명 |
 |---|---|
 | `dollarMath` | `LatexDollarMathOptions.None`(기본) / `Single`(`$…$`, `$$…$$` 블록) / `Single + InlineDouble`(문장 안 `$$…$$`) |
-| `theme` | `RichMarkdownTheme` — 본문·수식·코드 블록의 색과 글꼴을 설정한다 |
+| `theme` | `RichMarkdownTheme` — 본문·코드 글꼴, 요소별 색, 수식 크기·색·정렬을 설정한다 |
 | `streaming` | `RichMarkdownStreamingOptions?` — 스트리밍 중인 메시지에만 건다. 끝나면 `null` |
 | `codeBlocks` | `RichMarkdownCodeBlockOptions(highlighter, diagram)` — opt-in 모듈 주입. 기본 `None` |
 | `isDarkTheme` | 기본 `isSystemInDarkTheme()` |
@@ -116,7 +128,8 @@ val view = RichMarkdownView(context).apply {
 
 ### 테마
 
-색 8종·폰트 7종·수식 서체·블록 수식 정렬을 값 타입 하나로 지정한다. 색은 light/dark 쌍이라
+색 8종·본문/제목/코드 폰트 7종·블록 수식 정렬을 값 타입 하나로 지정한다. 수식 크기는
+`bodyFont`를 따르며 수식 서체는 RaTeX가 KaTeX 기반 내장 글꼴에서 자동으로 선택한다. 색은 light/dark 쌍이라
 `isDarkTheme` 전환에 따라 같은 테마 객체가 두 모드를 모두 커버한다.
 
 ```kotlin
@@ -242,13 +255,15 @@ sequenceDiagram
   UI->>UI: generation 일치 → 1차 게시 (수식은 아직 원문)
   UI->>M: 수식 raster 요청
   Note over M: cache 조회 → RaTeX<br/>LruCache 64 MiB
-  M-->>UI: bitmap · 벡터 경로
+  M-->>UI: 수식 bitmap · 크기 정보
   UI->>UI: generation 일치 → 최종 게시
-  Note over UI: generation이 stale이면<br/>UI에도 cache에도 넣지 않는다
+  Note over UI: generation이 다르면 UI에 반영하지 않음<br/>이미 시작한 수식의 유효한 bitmap 캐시 저장은 별도
 ```
 
 generation은 진입 직후, 파싱 직후, 각 수식 사이, 최종 게시 직전에 확인한다.
-stale이 된 연산 결과는 UI에도 cache에도 넣지 않는다.
+이전 요청 결과는 현재 UI와 새 ParseCache 저장에 반영하지 않는다. 이미 시작한 수식의
+비트맵은 같은 원문·크기·색·블록 여부로 재사용할 수 있으므로 공유 수식 캐시에 저장될 수 있다.
+공유 캐시 저장과 최신 화면 반영은 서로 다른 규칙이다.
 
 ### 수식 raster와 cache
 
@@ -259,9 +274,12 @@ View는 `ReplacementSpan`, Compose는 `InlineTextContent`로 문장 흐름에 �
 `array`의 열 정렬과 `\underbrace{...}_{...}`를 지원한다. 분수·조건식·두 아래 중괄호가
 조합된 복합 수식은 데모 «복합 수식 · array · underbrace»에서 Markdown 설명과 함께 볼 수 있다.
 
-cache key는 LaTeX 원문, 수식 서체, 실제 px 크기, resolved ARGB, display 여부다
+cache key는 LaTeX 원문, 실제 px 크기, resolved ARGB, display 여부다
 (iOS의 pointSize × displayScale은 `fontSizePx` 하나로 합쳤다). cost는 bitmap pixel byte,
 상한은 64 MiB `LruCache`다.
+
+수식 서체는 캐시 키나 렌더 요청의 선택 항목이 아니다. RaTeX가 수식 내용에 맞는
+KaTeX 기반 내장 글꼴을 사용하며 앱은 크기·색·블록 표시 여부를 전달한다.
 
 ### 입력 보호
 
@@ -340,8 +358,8 @@ paragraph 전체를 감싼 `$$ ... $$`는 여전히 block이다.
 
 ## 알려진 제약
 
-- **수식 서체는 KaTeX 단일이다.** iOS의 `LatexMathFont` 12종과 다르다 — RaTeX·latex-renderer 모두
-  KaTeX 폰트로 고정되어 있다. 문서화된 플랫폼 차이다.
+- **수식 서체를 직접 선택할 수 없다.** RaTeX가 KaTeX 기반 내장 글꼴을 사용한다.
+  현재 iOS에도 별도 수식 서체 선택 API는 없다. 본문 글꼴의 디자인·굵기를 지정하는 API와는 다른 설정이다.
 - **범위(문자 구간) 단위 색·폰트 지정은 없다.** 테마는 요소 단위다. 굵게·기울임·취소선은 Markdown
   원문이 정하고 소비 앱 API로는 지정할 수 없다.
 - **공개 parser/AST는 없다.** `richmarkdown-core`는 Maven에 비공개 모듈을 둘 수 없어 발행하지만
@@ -358,7 +376,7 @@ paragraph 전체를 감싼 `$$ ... $$`는 여전히 block이다.
 - 원격 이미지 로딩, 블록 편집기(iOS `RichMarkdownBlockEditor`)는 v1 비목표다.
 - 메시지 목록의 세로 스크롤·virtualization과 읽기 폭 제한은 소비 앱 몫이다.
 - 입력 상한·cache 상한 수치는 측정 전 잠정값이며 공개 API로 고정하지 않는다.
-- Maven Central 미발행이라 현재는 소스 체크아웃 또는 로컬 `publishToMavenLocal`로만 쓸 수 있다.
+- Maven Central은 아직 발행하지 않았다. GitHub Release의 `richmarkdown-android-0.2.0-maven.zip`에는 네 모듈의 Release AAR/JAR·POM·Gradle metadata가 있어 로컬 Maven 저장소로 사용할 수 있다. 소스 체크아웃·`publishToMavenLocal`도 지원한다.
 
 ---
 
@@ -388,6 +406,7 @@ paragraph 전체를 감싼 `$$ ... $$`는 여전히 block이다.
 
 | Android | iOS | 비고 |
 |---|---|---|
+| 0.2.0 | 0.9.0 | 최신 요청 게시·입력 보호·Mermaid 수명 개선 |
 | 0.1.0 | 0.8.0 | 수식 문법·fail-open·스트리밍 규칙 동일. 수식 서체는 KaTeX 단일 |
 
 ## 빌드와 테스트
@@ -414,6 +433,26 @@ paragraph 전체를 감싼 `$$ ... $$`는 여전히 block이다.
   이 경로들의 검증 근거로 쓰지 않는다.
 - iOS 자산(Prism·Mermaid 번들)은 `scripts/sync-ios-assets.sh`로 복사하고 SHA-256을 대조한다.
   각 모듈 루트 `SYNC-MANIFEST.txt`가 기록이다.
+
+## GitHub Release의 Maven 저장소
+
+0.2.0 Release의 `richmarkdown-android-0.2.0-maven.zip`을 프로젝트의 `local-repository` 폴더에 풀고 저장소를 추가한다. 네 모듈의 metadata가 전이 의존성을 선언하며, 외부 의존성은 기존 Google Maven·Maven Central에서 해결한다.
+
+```kotlin
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url = uri("local-repository") }
+    }
+}
+```
+
+의존성 버전은 `0.2.0`으로 지정한다. 이 ZIP 배포는 Maven Central 최초 발행과 별개다.
+
+## 패키지 문서
+
+모듈별 architecture·spec·ADR과 별도 개선 제안은 [패키지 보고서](docs/report/README.md)에서 확인한다.
 
 ## 기여
 

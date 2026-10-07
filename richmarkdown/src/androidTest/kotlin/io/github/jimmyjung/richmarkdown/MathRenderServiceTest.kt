@@ -34,7 +34,7 @@ class MathRenderServiceTest {
     }
 
     private fun key(latex: String, isDisplay: Boolean = false, fontSizePx: Float = 48f) =
-        MathRenderKey(latex, LatexMathFont.KaTeX, fontSizePx, Color.BLACK, isDisplay)
+        MathRenderKey(latex, fontSizePx, Color.BLACK, isDisplay)
 
     @Test
     fun inlineRasterHasMetricsAndPixels() {

@@ -162,7 +162,6 @@ class RichMarkdownView @JvmOverloads constructor(
         dollarMath = dollarMath,
         fontSizePx = theme.bodyFont.textSizePx(context),
         colorArgb = theme.textColor.resolve(resolvedIsDark()),
-        mathFont = theme.mathFont,
         // 블록 수식은 벡터로 그린다 — raster를 요청하지 않는다.
         rastersDisplayMath = false,
     )

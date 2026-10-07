@@ -24,7 +24,6 @@ import kotlin.math.ceil
  */
 data class MathRenderKey(
     val latex: String,
-    val mathFont: LatexMathFont,
     val fontSizePx: Float,
     @ColorInt val colorArgb: Int,
     val isDisplay: Boolean,

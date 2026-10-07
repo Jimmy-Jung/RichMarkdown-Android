@@ -14,7 +14,7 @@ enum class LatexEquationAlignment {
 }
 
 /**
- * 공개 theme. 값 비교로 렌더 요청 key에 포함된다. iOS `RichMarkdownTheme.swift`와 필드 1:1.
+ * 공개 theme. 값 비교로 렌더 요청 key에 포함된다. iOS `RichMarkdownTheme.swift`의 요소별 설정에 대응한다.
  *
  * 색과 폰트 모두 **요소 단위**다. 범위(문자 구간) 단위 지정은 제공하지 않는다.
  *
@@ -58,8 +58,6 @@ data class RichMarkdownTheme(
     val codeFont: RichMarkdownFont = RichMarkdownFont(design = RichMarkdownFont.Design.Monospaced, relativeTo = RichMarkdownTextStyle.Body),
     /** 코드 블록 헤더의 언어 라벨. */
     val codeLabelFont: RichMarkdownFont = RichMarkdownFont(design = RichMarkdownFont.Design.Monospaced, relativeTo = RichMarkdownTextStyle.Caption),
-    /** 수식 서체. Android는 [LatexMathFont.KaTeX] 하나다. */
-    val mathFont: LatexMathFont = LatexMathFont.KaTeX,
     /** 블록 수식 정렬. 기본 leading (콘텐츠가 좁을 때만 의미). */
     val equationAlignment: LatexEquationAlignment = LatexEquationAlignment.Leading,
 ) {

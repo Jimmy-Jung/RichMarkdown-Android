@@ -20,9 +20,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -85,7 +85,7 @@ internal fun CodeBlockView(language: String?, code: String, ctx: RenderContext) 
         val diagram = ctx.codeBlocks.diagramRenderer(language)
         if (diagram != null) {
             Box(Modifier.fillMaxWidth().background(styles.codeBlockBackground)) {
-                diagram.Content(code, ctx.theme)
+                diagram.Content(code, ctx.theme, styles.isDark)
             }
         } else {
             CodeBody(language, code, ctx)
@@ -96,10 +96,11 @@ internal fun CodeBlockView(language: String?, code: String, ctx: RenderContext) 
 @Composable
 private fun CodeBody(language: String?, code: String, ctx: RenderContext) {
     val highlighter = ctx.codeBlocks.highlighter
-    // 색은 늦게 와도 된다: plain으로 먼저 그리고 범위가 도착하면 색만 바꾼다. 언어·원문이 바뀌면 initialValue로
-    // 되돌아가 이전 범위를 즉시 버린다 — 위치가 밀린 색을 한 프레임도 보이지 않는다 (iOS `HighlightState`).
-    val spans by produceState(emptyList<RichMarkdownHighlightSpan>(), highlighter, language, code) {
-        value = if (highlighter == null || language == null || code.isEmpty()) {
+    // state 자체를 원문·언어·구현 인스턴스별로 분리한다. 이전 작업은 이전 state만 갱신할 수 있다.
+    // codeBlocks의 equals는 구현체의 값 동등성이 아니라 참조 동일성을 비교한다.
+    var spans by remember(ctx.codeBlocks, language, code) { mutableStateOf(emptyList<RichMarkdownHighlightSpan>()) }
+    LaunchedEffect(ctx.codeBlocks, language, code) {
+        spans = if (highlighter == null || language == null || code.isEmpty()) {
             emptyList()
         } else {
             highlightSpans(highlighter, code, language)

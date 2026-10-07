@@ -15,8 +15,11 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
@@ -41,17 +44,21 @@ private val BLOCK_MATH_SPACING = 8.dp
  * 레이아웃 전·실패는 원문 source를 `codeFont`로 표시한다 (계약 §7).
  */
 @Composable
-internal fun BlockMathView(segment: MathSegment, ctx: RenderContext) {
+internal fun BlockMathView(
+    segment: MathSegment,
+    ctx: RenderContext,
+    loadLayout: suspend (MathRenderKey) -> MathVectorLayout? = MathRenderService.shared::layout,
+) {
     val key = MathRenderKey(
         latex = segment.latex,
-        mathFont = ctx.theme.mathFont,
         fontSizePx = ctx.mathFontSizePx,
         colorArgb = ctx.colorArgb,
         isDisplay = true,
     )
-    // key(원문·색·크기)가 바뀌면 null로 되돌아가 stale 벡터를 섞지 않는다.
-    val layout by produceState<MathVectorLayout?>(initialValue = null, key) {
-        value = MathRenderService.shared.layout(key)
+    // 결과 state를 key(원문·색·크기)별로 분리해 새 요청의 첫 프레임부터 원문을 표시한다.
+    var layout by remember(key, loadLayout) { mutableStateOf<MathVectorLayout?>(null) }
+    LaunchedEffect(key, loadLayout) {
+        layout = loadLayout(key)
     }
     Row(
         Modifier.fillMaxWidth(),

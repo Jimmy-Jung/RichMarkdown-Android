@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import io.github.jimmyjung.richmarkdown.RenderedMath
 import io.github.jimmyjung.richmarkdown.RichMarkdownCodeBlockOptions
+import io.github.jimmyjung.richmarkdown.RichMarkdownDiagramRendering
 import io.github.jimmyjung.richmarkdown.RichMarkdownStreamingOptions
 import io.github.jimmyjung.richmarkdown.RichMarkdownTheme
 import io.github.jimmyjung.richmarkdown.core.InlineContent
@@ -89,7 +90,13 @@ internal class IncrementalRebuild(private val stack: LinearLayout) {
             rendered.add(RenderedBlock(block, builder.blockView(block, images, tail), mathCount, tail))
         }
 
-        setBlockViews(rendered.map { it.view }, stableCount)
+        val views = rendered.map { it.view }
+        val retained = views.toSet()
+        val previousDiagram = renderedAppearance?.codeBlocks?.diagram
+        setBlockViews(views, stableCount)
+        if (previousDiagram != null) {
+            renderedBlocks.filter { it.view !in retained }.forEach { disposeDiagrams(it.view, previousDiagram) }
+        }
         renderedBlocks = rendered
         renderedAppearance = appearance
     }
@@ -103,6 +110,13 @@ internal class IncrementalRebuild(private val stack: LinearLayout) {
         builder.configureFallback(view, markdown)
         // reusedCount 1: 직전 프레임도 fallback이었다면(연속 스트리밍) 계층 조작이 없다.
         setBlockViews(listOf(view), reusedCount = 1)
+    }
+
+    private fun disposeDiagrams(view: View, renderer: RichMarkdownDiagramRendering) {
+        if (view is ViewGroup) {
+            for (index in 0 until view.childCount) disposeDiagrams(view.getChildAt(index), renderer)
+        }
+        renderer.disposeView(view)
     }
 
     /**
