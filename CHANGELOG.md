@@ -5,6 +5,15 @@ semver다. `0.x`에서는 minor 버전에서도 공개 API가 바뀔 수 있다.
 
 ## [Unreleased]
 
+### Added
+
+- opt-in `richmarkdown-editor` 모듈(D1a): iOS `RichMarkdownBlockEditor`의 순수 Kotlin 모델·코덱 이식 —
+  `EditorBlock`·`EditorBlockKind`·`EditorRange`·`BlockSelection`·`InlineMark`·`InlineMarkdownCodec`·
+  `BlockEditorModel`(연속 문서 좌표, 분할·병합·변환·이동, undo/redo 100)·`BlockDocumentPasteboardPayload`(version 1 JSON).
+  편집 뷰·Compose 래퍼는 아직 없다.
+- iOS와 다른 점: grapheme 경계는 `BreakIterator`, surrogate pair 중간 범위는 거절, Markdown 입력·문서 교체의
+  CRLF·CR은 LF로 정규화, fence 트림은 Swift `.whitespaces`(Zs + 탭) 규칙.
+
 ### Not yet
 
 - Maven Central 실제 발행(사용자 승인), commonmark-java upstream PR(D3a ③).
