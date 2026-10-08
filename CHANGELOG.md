@@ -10,9 +10,15 @@ semver다. `0.x`에서는 minor 버전에서도 공개 API가 바뀔 수 있다.
 - opt-in `richmarkdown-editor` 모듈(D1a): iOS `RichMarkdownBlockEditor`의 순수 Kotlin 모델·코덱 이식 —
   `EditorBlock`·`EditorBlockKind`·`EditorRange`·`BlockSelection`·`InlineMark`·`InlineMarkdownCodec`·
   `BlockEditorModel`(연속 문서 좌표, 분할·병합·변환·이동, undo/redo 100)·`BlockDocumentPasteboardPayload`(version 1 JSON).
-  편집 뷰·Compose 래퍼는 아직 없다.
 - iOS와 다른 점: grapheme 경계는 `BreakIterator`, surrogate pair 중간 범위는 거절, Markdown 입력·문서 교체의
   CRLF·CR은 LF로 정규화, fence 트림은 Swift `.whitespaces`(Zs + 탭) 규칙.
+- `richmarkdown-editor` 편집 뷰: `BlockDocumentEditText`(EditText, iOS `BlockDocumentUITextView` + Coordinator)·
+  `MarkdownStyler`·`BlockAlignmentConfiguration`·`EditorToolbarAction`·`BlockEditorInputAccessory`와 Compose 래퍼
+  `compose.BlockDocumentTextEditor`. 목록 마커·체크박스·인용 바·인라인 코드 칩, 인라인·블록 수식(raster),
+  IME 조합 확정 시 한 번만 모델에 전달, 전체 문서 복사·붙여넣기 블록 payload(`ClipDescription` extras), Ctrl+Z/Ctrl+Shift+Z → 모델 undo/redo.
+- 편집 뷰의 iOS와 다른 점: 표시 문자열이 `documentText`와 같다(U+2063 보충 문자 없음, 수식은 원문 위 span),
+  모델이 무시·변형한 편집 뒤에도 최신 상태로 다시 그려 화면 == 모델, `InputConnection`을 감싸 IME 확정을 감지,
+  trailing indent(인용·코드·수식 오른쪽 여백)는 적용하지 않는다.
 
 ### Changed
 

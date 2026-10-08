@@ -2,7 +2,7 @@
 // Date: 2026-10-08
 //
 // opt-in 블록 편집기 (DEVELOPMENT.md D1a). iOS `RichMarkdownBlockEditor` 대응.
-// 순수 Kotlin 모델·코덱(BlockEditorModel·InlineMarkdownCodec)과 이후 EditText·Compose 편집기를 담는다.
+// 순수 Kotlin 모델·코덱(BlockEditorModel·InlineMarkdownCodec)과 EditText 편집 뷰·스타일러·Compose 래퍼를 담는다.
 
 plugins {
     alias(libs.plugins.android.library)
@@ -47,13 +47,26 @@ kotlin {
 dependencies {
     api(project(":richmarkdown"))
 
-    // Compose 편집기 래퍼용. kotlin.compose 플러그인은 compile classpath에 Compose runtime이 있어야 한다.
+    // 수식 raster 요청 수명(뷰 attach 동안). richmarkdown은 implementation으로만 가져 컴파일 classpath에 없다.
+    implementation(libs.kotlinx.coroutines.android)
+
+    // Compose 편집기 래퍼(AndroidView). kotlin.compose 플러그인은 compile classpath에 Compose runtime이 있어야 한다.
     val composeBom = platform(libs.compose.bom)
     implementation(composeBom)
+    implementation(libs.compose.ui)
     implementation(libs.compose.foundation)
 
     // JVM 단위 테스트 (모델·코덱 순수 로직). Android 모듈은 JUnit4다.
     testImplementation("junit:junit:4.13.2")
+
+    // 편집 뷰·스타일러 instrumented 테스트. 에뮬레이터에서 connectedDebugAndroidTest로 실행한다 (richmarkdown과 같은 구성).
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.core)
+    // ui-test-junit4가 끌어오는 구 Espresso는 API 37에서 InputManager.getInstance 리플렉션으로 실패한다(실측). richmarkdown과 같은 버전으로 올린다.
+    androidTestImplementation(libs.androidx.test.espresso.core)
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
 
 // Maven Central 발행 (D8). 좌표 io.github.jimmy-jung:<POM_ARTIFACT_ID>:<VERSION_NAME>.
