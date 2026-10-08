@@ -1,6 +1,6 @@
 # richmarkdown-editor 개선 기록
 
-기준일: 2026-10-08 · 상태: **AE-I01~AE-I04·AE-I14 구현·회귀 추가, AE-I05~AE-I13 미해결**
+기준일: 2026-10-08 · 상태: **AE-I01~AE-I04·AE-I14 구현·회귀 추가, AE-I13 해결, AE-I05~AE-I12 미해결**
 
 블록 편집기를 iOS에서 옮기면서 iOS 동작과 다르게 고친 항목과, 이번 작업에서 남긴 한계를 구분합니다. 근거는 [편집기 소스](../../../richmarkdown-editor/src/main/kotlin/io/github/jimmyjung/richmarkdown/editor/), [JVM 테스트](../../../richmarkdown-editor/src/test/), [Android 테스트](../../../richmarkdown-editor/src/androidTest/)입니다. 미해결 항목의 문구는 소스의 `ponytail:` 주석과 KDoc에 적힌 한계를 따릅니다. 실행 결과는 [검수 기록](../validation.md#2026-10-08-블록-편집기-추가-검증)에 있습니다.
 
@@ -73,7 +73,7 @@
 
 ## AE-I13: Maven 배포 파일 생성과 검수
 
-**상태: 미실행.** `richmarkdown-editor`에 Maven 발행 설정과 POM 값을 추가했지만 `publishToMavenLocal`을 포함한 배포 파일 생성·대조는 하지 않았습니다. 0.2.0 Release ZIP에는 이 모듈이 없습니다. 다음 릴리스에서 버전을 올린 뒤 다른 네 모듈과 함께 생성·대조합니다.
+**상태: 해결(0.3.0).** 0.2.0 Release ZIP에는 이 모듈이 없었습니다. 0.3.0에서 버전을 올린 뒤 다른 네 모듈과 함께 `publishToMavenLocal`로 Release AAR·POM·Gradle metadata·sources/Javadoc JAR를 생성하고 좌표·내부 의존성 버전·minSdk를 대조해 `richmarkdown-android-0.3.0-maven.zip`에 포함했습니다. 결과는 [검수 기록](../validation.md#2026-10-08-030-릴리스-검증)에 있습니다. Maven Central 발행은 별도 단계입니다.
 
 ## AE-I14: 서식 적용 시 한글 줄 높이 변화
 

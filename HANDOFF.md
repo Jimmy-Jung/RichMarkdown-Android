@@ -6,8 +6,8 @@
 
 ## 현재 지점
 
-- 커밋: P1·P2 완료, minSdk 30(D9a), upstream 이슈 #457 등록, 복합 수식 상한 수정. 0.1.0(2026-10-06)·0.2.0(`38a1db9`) 태그와 GitHub Release. 남은 항목: Maven Central 실제 발행(사용자 승인·자격 증명) 또는 JitPack 설정.
-- 블록 편집기(D1a, 2026-10-08): `richmarkdown-editor` 모듈·렌더 모듈 내부 API 공개·데모 화면·문서까지 로컬 커밋(`159fff4`~`ffec7d7` + 문서 커밋). push·태그·버전 변경은 하지 않았다(VERSION_NAME 0.2.0, CHANGELOG `[Unreleased]`). 남은 항목은 아래 «블록 편집기» 보드.
+- 커밋: P1·P2 완료, minSdk 30(D9a), upstream 이슈 #457 등록, 복합 수식 상한 수정. 0.1.0(2026-10-06)·0.2.0(`38a1db9`) 태그와 GitHub Release. 0.3.0 릴리스 준비 커밋(`chore(release): 0.3.0`, 2026-10-08)과 다섯 모듈 Maven ZIP 생성·대조 완료. 남은 항목: Maven Central 실제 발행(사용자 승인·자격 증명) 또는 JitPack 설정.
+- 블록 편집기(D1a, 2026-10-08): `richmarkdown-editor` 모듈·렌더 모듈 내부 API 공개·데모 화면·문서(`159fff4`~`1253fb4`)를 0.3.0에 포함한다(VERSION_NAME 0.3.0, CHANGELOG `[0.3.0]`). 남은 항목은 아래 «블록 편집기» 보드.
 - 설계 정본: `DEVELOPMENT.md`(결정 D0~D9·D1a·D3a·D4a·D9a, §8 P0 결과). API 계약: `docs/P1-CONTRACTS.md`, 편집기는 `docs/report/spec/richmarkdown-editor.md`.
 - 에뮬레이터: AVD `RichMarkdown_Validation`(pixel_6, android-37.1 `google_apis_ps16k`, 16 KB 페이지). AVD는 외장 SSD `$B/AndroidAVD`에 있으므로 `ANDROID_AVD_HOME="$B/AndroidAVD"`를 지정해야 보인다. 이전에 적던 `Pixel_6` AVD는 존재하지 않는다. `API24_Pixel6`는 minSdk 30 이후 검증 대상이 아니다(참고용).
 
@@ -48,7 +48,7 @@ export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:+$JAVA_TOOL_OPTIONS }-Djava.io.tmp
 - [ ] Maven Central 실제 발행 — 사용자 승인 + `~/.gradle/gradle.properties`에 mavenCentralUsername/Password·signingInMemoryKey/Password 설정 후 `./gradlew publishToMavenCentral -PRELEASE_SIGNING_ENABLED=true`
 - [x] upstream 이슈 등록: https://github.com/commonmark/commonmark-java/issues/457 (2026-09-16). PR은 유지보수자가 해법 1(치환)을 원하면 진행
 
-### 블록 편집기 (D1a, [Unreleased])
+### 블록 편집기 (D1a, 0.3.0)
 - [x] `richmarkdown-editor` 모듈 + iOS 모델·코덱 이식(`159fff4`) — JVM 62/62, iOS Swift 소스 차등 비교(8,000건 차이 0, 이모지·결합 문자 1,500건 차이 113건 = 서로게이트 거절 81 + 코덱 UTF-16 순회 32)
 - [x] 렌더 모듈 span·글꼴 해석·칩 그리기 `@InternalRichMarkdownApi` 공개(`22985e3`) — `:richmarkdown` 단위 11/11·계측 21/21
 - [x] `BlockDocumentEditText`·`MarkdownStyler`·클립보드 payload·Compose 래퍼(`18a1fce`), 조합 중 도구 모음 확정(`eed41a3`) — 계측 30/30, `lintDebug` 오류 0
@@ -58,7 +58,7 @@ export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:+$JAVA_TOOL_OPTIONS }-Djava.io.tmp
 - [ ] 수식 글자 화면 표시와 블록 편집 정지컷·GIF를 사람이 직접 확인(캡처만 했고 보지 않음)
 - [ ] 실기기 Gboard 조합 중 도구 모음·클립보드 왕복 확인
 - [ ] 미해결 개선: 오른쪽 여백(AE-I05), 마지막 줄 caret 높이(AE-I06), 전체 재스타일링 성능 측정(AE-I07), Compose 재동기화 지연(AE-I08), 블록 수식 벡터화(AE-I09), 데모 회전 시 문서 유지(AE-I11)
-- [ ] 다음 릴리스: VERSION_NAME 올리기, 다섯 모듈 `publishToMavenLocal`·배포 파일 대조·Release ZIP 재생성(사용자 승인 후)
+- [x] 0.3.0 릴리스 준비: VERSION_NAME 0.3.0, 에뮬레이터 릴리스 게이트, 다섯 모듈 `publishToMavenLocal -Dmaven.repo.local="$B/release/0.3.0/m2"`·배포 파일 대조·`richmarkdown-android-0.3.0-maven.zip` 생성(2026-10-08). 결과는 `docs/report/validation.md` 0.3.0 절
 
 ## 위임 규칙 (cc2)
 

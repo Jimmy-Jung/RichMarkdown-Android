@@ -1,6 +1,6 @@
 # RichMarkdown Android 통합 명세
 
-기준일: 2026-10-08 · 구현 기준: `0.2.0` 릴리스 소스와 미배포 `[Unreleased]` 블록 편집기
+기준일: 2026-10-08 · 구현 기준: `0.3.0` 릴리스 소스(블록 편집기 포함)
 
 이 문서는 모듈 선택과 앱에서 지켜야 할 공통 사용 규칙을 다룹니다. 명세의 계약은 입력 조건, 반환값, 실패 처리 규칙을 뜻합니다. API별 요구·예외와 테스트 근거는
 [모듈별 명세](../README.md#모듈별-문서), 개선 제안은 [개선 기록](../improvements/README.md)에 있습니다. 낯선 용어는 [용어 안내](../glossary.md)를 참고합니다.
@@ -9,7 +9,7 @@
 
 | ID | 현재 선언·동작 | 근거 |
 | --- | --- | --- |
-| APK-01 | 라이브러리는 Core·표시 모듈·Highlight·Mermaid·Editor 다섯 모듈입니다. Editor는 2026-10-08에 추가한 미배포 모듈이며 0.2.0 배포 파일에는 없습니다. demo는 예제 앱, spike는 엔진 확인용 실험 모듈입니다. | [settings.gradle.kts](../../../settings.gradle.kts) |
+| APK-01 | 라이브러리는 Core·표시 모듈·Highlight·Mermaid·Editor 다섯 모듈입니다. Editor는 2026-10-08에 추가해 0.3.0부터 배포하는 선택형 모듈입니다. demo는 예제 앱, spike는 엔진 확인용 실험 모듈입니다. | [settings.gradle.kts](../../../settings.gradle.kts) |
 | APK-02 | Android 라이브러리의 선언된 최소 API는 30이며 compileSdk는 37입니다. 이는 프로젝트 설정으로, 설치된 SDK나 장치 상태를 설명하지 않습니다. | [버전 카탈로그](../../../gradle/libs.versions.toml), [Renderer 설정](../../../richmarkdown/build.gradle.kts) |
 | APK-03 | Core는 JVM 모듈입니다. Android 모듈의 View·Compose API와 독립적으로 파싱 코드를 다룹니다. | [Core 설정](../../../richmarkdown-core/build.gradle.kts) |
 | APK-04 | commonmark `0.30.0`, RaTeX `0.1.14`, QuickJS `1.0.15`를 선언합니다. 앱에 포함한 JavaScript 파일과 지원하는 언어 문법은 각 엔진 명세를 따릅니다. | [버전 카탈로그](../../../gradle/libs.versions.toml) |

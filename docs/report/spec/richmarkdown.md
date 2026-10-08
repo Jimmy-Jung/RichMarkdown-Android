@@ -27,7 +27,7 @@
 근거는 [Core 소스](../../../richmarkdown-core/src/main/)의 `InternalRichMarkdownApi.kt`와
 [Renderer 소스](../../../richmarkdown/src/main/)의 `RichMarkdownCodeBlockOptions.kt`입니다.
 
-0.2.0 이후 미배포 변경(커밋 `22985e3`)으로 블록 편집기가 재사용하는 `InlineCodeChipSpan`·`TypefaceStyleSpan`·`MathAttachmentSpan`·`InlineCodeChipPainter`와 `RichMarkdownFont.resolveTypeface()`·`RichMarkdownFont.textSizePx(context)`·`RichMarkdownTheme.resolvedTextColor(isDark)`를 같은 `InternalRichMarkdownApi` 표시로 공개했습니다. 표시 동작은 바꾸지 않았으며, 칩 그리기는 `ChipTextView`에서 `InlineCodeChipPainter`로 옮겼습니다. 편집기 쪽 계약은 [블록 편집기 명세](richmarkdown-editor.md)에 있습니다.
+0.3.0 변경(커밋 `22985e3`)으로 블록 편집기가 재사용하는 `InlineCodeChipSpan`·`TypefaceStyleSpan`·`MathAttachmentSpan`·`InlineCodeChipPainter`와 `RichMarkdownFont.resolveTypeface()`·`RichMarkdownFont.textSizePx(context)`·`RichMarkdownTheme.resolvedTextColor(isDark)`를 같은 `InternalRichMarkdownApi` 표시로 공개했습니다. 표시 동작은 바꾸지 않았으며, 칩 그리기는 `ChipTextView`에서 `InlineCodeChipPainter`로 옮겼습니다. 편집기 쪽 계약은 [블록 편집기 명세](richmarkdown-editor.md)에 있습니다.
 
 `RichMarkdownRenderModel`, `MathRenderService`와 결과 타입도 Kotlin에서 접근할 수 있지만, 구문 분석 결과 타입은 Core의 내부 opt-in API입니다. `Request`·`BoundedInput`을 직접 만들어도 모델 `submit`과 Core `parse`가 입력을 다시 제한합니다. 이전 입력 경로(ingress)에서 잘렸다는 flag는 OR 연산으로 유지하며 호출자가 보관한 원래 Request 자체는 수정하지 않습니다.
 

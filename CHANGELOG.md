@@ -5,6 +5,12 @@ semver다. `0.x`에서는 minor 버전에서도 공개 API가 바뀔 수 있다.
 
 ## [Unreleased]
 
+### Not yet
+
+- Maven Central 실제 발행(사용자 승인), commonmark-java upstream PR(D3a ③).
+
+## [0.3.0] - 2026-10-08
+
 ### Added
 
 - opt-in `richmarkdown-editor` 모듈(D1a): iOS `RichMarkdownBlockEditor`의 순수 Kotlin 모델·코덱 이식 —
@@ -37,9 +43,12 @@ semver다. `0.x`에서는 minor 버전에서도 공개 API가 바뀔 수 있다.
 - `richmarkdown-editor`: 한글 줄에 굵게·기울임을 걸면 줄 높이가 커지던 문제를 고친다(SM-G988N 실측 제목 137→149px).
   `BlockDocumentEditText`의 `isFallbackLineSpacing`을 끈다. span이 줄을 여러 run으로 나눌 때 한글 fallback 글꼴 metrics가 줄 높이에 더해졌다.
 
-### Not yet
+### Compatibility
 
-- Maven Central 실제 발행(사용자 승인), commonmark-java upstream PR(D3a ③).
+- artifact는 `richmarkdown-editor`를 더해 다섯 개다. 편집기는 opt-in이며 렌더 모듈은 편집기에 의존하지 않으므로 기존 네 artifact만 쓰는 앱에는 영향이 없다.
+- 선언된 minSdk 30과 native RaTeX 0.1.14는 유지한다. 버전은 iOS 0.9.1과 독립된 Android 0.3.0이다.
+- `@InternalRichMarkdownApi`로 공개한 span·서체 해석·칩 그리기는 편집기용 opt-in 내부 API다. 공개 API 계약이 아니며 minor 버전에서도 바뀔 수 있으므로 `richmarkdown-editor`는 `richmarkdown`과 같은 버전으로 함께 쓴다.
+- 최초 Maven Central 발행은 이번 GitHub Release 배포와 구분한다.
 
 ## [0.2.0] - 2026-10-07
 
@@ -121,6 +130,7 @@ semver다. `0.x`에서는 minor 버전에서도 공개 API가 바뀔 수 있다.
   parse 전에는 4 KiB 원문과 1–1024 px 폰트만 검사하고, parse 후 실제 layout 크기로
   각 변 8192 px·4,194,304 pixel을 raster·벡터 공통 경계에서 제한한다.
 
-[Unreleased]: https://github.com/Jimmy-Jung/RichMarkdown-Android/compare/0.2.0...HEAD
+[Unreleased]: https://github.com/Jimmy-Jung/RichMarkdown-Android/compare/0.3.0...HEAD
+[0.3.0]: https://github.com/Jimmy-Jung/RichMarkdown-Android/releases/tag/0.3.0
 [0.2.0]: https://github.com/Jimmy-Jung/RichMarkdown-Android/releases/tag/0.2.0
 [0.1.0]: https://github.com/Jimmy-Jung/RichMarkdown-Android/releases/tag/0.1.0

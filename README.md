@@ -3,11 +3,11 @@
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.4-7F52FF.svg)](https://kotlinlang.org)
 [![Android](https://img.shields.io/badge/Android-minSdk%2030-3DDC84.svg)](https://developer.android.com)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.2.0%20beta-yellow.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.3.0%20beta-yellow.svg)](CHANGELOG.md)
 
-> **0.2.0 beta** — Compose·View 렌더러, 코드 블록 확장 2종, 데모 앱, iOS와 같은 RaTeX 수식 엔진.
+> **0.3.0 beta** — Compose·View 렌더러, 코드 블록 확장 2종, iOS `RichMarkdownBlockEditor`에 대응하는 opt-in 블록 편집기
+> `richmarkdown-editor`, 데모 앱, iOS와 같은 RaTeX 수식 엔진.
 > GitHub Release 태그로 배포하며 Maven Central에는 아직 발행하지 않았다. `0.x`에서는 minor 버전에도 공개 API가 바뀔 수 있다.
-> opt-in 블록 편집기 `richmarkdown-editor`는 소스에 추가했지만 아직 릴리스하지 않았다(`[Unreleased]`). 0.2.0 배포 파일에는 없다.
 > 변경 내역은 [CHANGELOG.md](CHANGELOG.md)를 본다.
 
 iOS [RichMarkdown](https://github.com/Jimmy-Jung/RichMarkdown)과 **수식 문법·실패 처리·스트리밍 표시 규칙을 공유하는**
@@ -24,7 +24,7 @@ WebView 없이 네이티브로 렌더한다. Jetpack Compose는 `RichMarkdown()`
 - 코어는 WebView·JavaScript 런타임·이미지 로더를 링크하지 않는다. 코드 하이라이팅과 Mermaid는
   별도 opt-in 모듈이다.
 - iOS `RichMarkdownBlockEditor`에 대응하는 Notion 스타일 블록 편집기(`richmarkdown-editor`)도 opt-in 모듈이다.
-  렌더 모듈은 편집기에 의존하지 않는다. 아직 릴리스 전이다.
+  렌더 모듈은 편집기에 의존하지 않는다.
 - 스트리밍 입력(최신 전체 문자열)을 전제로 설계했다. coalescing + latest-wins.
 - 수식 문법·실패 정책·스트리밍 표시 규칙은 iOS와 같다. 설계 결정과 근거는
   [DEVELOPMENT.md](DEVELOPMENT.md)에 있다.
@@ -53,7 +53,7 @@ WebView 없이 네이티브로 렌더한다. Jetpack Compose는 `RichMarkdown()`
 | 블록 편집기 | 블록 편집기 · 도구 모음 |
 |---|---|
 | <img src="docs/screenshots/09-block-editor.png" alt="회의 노트 제목으로 시작하는 샘플 문서와 화면 아래 도구 모음을 표시한 블록 편집기" width="260"> | <img src="docs/screenshots/10-block-editor.gif" alt="본문 문단 끝에 단어를 입력하고 선택해 굵게를 적용한 뒤 그 문단을 인용으로 바꾸고 실행 취소한 다음 할 일 블록을 추가하는 블록 편집기 데모" width="260"> |
-| 제목·목록·할 일·인용·코드·수식 블록이 섞인 샘플 문서를 `EditText` 하나에서 이어진 문서로 편집한다. 릴리스 전 opt-in 모듈이다. | 첫 본문 문단 끝에 입력한 `Phase3`를 선택해 굵게를 적용하고 그 문단을 인용으로 바꾼다. 도구 모음을 밀어 실행 취소를 눌러 다시 문단으로 되돌린 뒤 블록 추가로 아래에 할 일 블록을 넣는다. 메뉴를 여는 동안에도 키보드는 내려가지 않는다. |
+| 제목·목록·할 일·인용·코드·수식 블록이 섞인 샘플 문서를 `EditText` 하나에서 이어진 문서로 편집한다. opt-in 모듈이다. | 첫 본문 문단 끝에 입력한 `Phase3`를 선택해 굵게를 적용하고 그 문단을 인용으로 바꾼다. 도구 모음을 밀어 실행 취소를 눌러 다시 문단으로 되돌린 뒤 블록 추가로 아래에 할 일 블록을 넣는다. 메뉴를 여는 동안에도 키보드는 내려가지 않는다. |
 
 ### SSE 스트리밍
 
@@ -64,26 +64,24 @@ WebView 없이 네이티브로 렌더한다. Jetpack Compose는 `RichMarkdown()`
 
 ## 설치
 
-Maven Central에는 아직 발행하지 않았다. 먼저 [GitHub Release의 Maven 저장소](#github-release의-maven-저장소) 안내에 따라 0.2.0 ZIP을 풀고 저장소를 추가한 뒤 다음 의존성을 사용한다.
+Maven Central에는 아직 발행하지 않았다. 먼저 [GitHub Release의 Maven 저장소](#github-release의-maven-저장소) 안내에 따라 0.3.0 ZIP을 풀고 저장소를 추가한 뒤 다음 의존성을 사용한다.
 
 ```kotlin
 dependencies {
-    implementation("io.github.jimmy-jung:richmarkdown:0.2.0")
+    implementation("io.github.jimmy-jung:richmarkdown:0.3.0")
 
     // opt-in. 필요한 것만 추가한다.
-    implementation("io.github.jimmy-jung:richmarkdown-highlight:0.2.0") // Prism + QuickJS
-    implementation("io.github.jimmy-jung:richmarkdown-mermaid:0.2.0")   // 공식 Mermaid + WebView
-    // 블록 편집기 richmarkdown-editor는 0.2.0에 없다. 아래 «블록 편집기 모듈» 참고.
+    implementation("io.github.jimmy-jung:richmarkdown-highlight:0.3.0") // Prism + QuickJS
+    implementation("io.github.jimmy-jung:richmarkdown-mermaid:0.3.0")   // 공식 Mermaid + WebView
+    implementation("io.github.jimmy-jung:richmarkdown-editor:0.3.0")    // 블록 편집기, richmarkdown과 같은 버전
 }
 ```
 
-### 블록 편집기 모듈 (릴리스 전)
+### 블록 편집기 모듈
 
-`richmarkdown-editor`는 CHANGELOG `[Unreleased]` 변경이라 0.2.0 Release ZIP에 들어 있지 않다. 다음 릴리스 전에는
-이 저장소를 체크아웃해 데모 앱처럼 프로젝트 모듈로 빌드한다(`demo/build.gradle.kts`의
-`implementation(project(":richmarkdown-editor"))`). 배포 좌표는 `io.github.jimmy-jung:richmarkdown-editor`로 정했지만
-이 모듈의 Maven 배포 파일은 아직 만들거나 검수하지 않았다. 편집기는 렌더 모듈의 내부 API를 공유하므로
-`richmarkdown`과 같은 버전으로 함께 써야 한다.
+`richmarkdown-editor`는 0.3.0부터 Release ZIP에 포함된다. 편집기는 렌더 모듈의 `@InternalRichMarkdownApi`
+내부 API를 공유하므로 `richmarkdown`과 같은 버전으로 함께 써야 한다. 이 모듈의 POM·Gradle metadata가
+`richmarkdown`을 전이 의존성으로 선언한다.
 
 ### minSdk 30
 
@@ -97,7 +95,7 @@ dependencies {
 `RichMarkdownTheme.mathFont`, `RichMarkdownRenderModel.Request.mathFont`,
 `MathRenderKey.mathFont`는 더 이상 제공하지 않는다. 기존 코드의 `mathFont` 인자를
 삭제하면 된다. 직접 호출한 `Request.of` 등의 생성 함수에서도 이 인자를 제거한다.
-`LatexMathFont` import와 변수·타입 참조도 삭제한 뒤, 0.2.0 의존성으로 앱과 소비 라이브러리를 다시 컴파일한다.
+`LatexMathFont` import와 변수·타입 참조도 삭제한 뒤, 0.2.0 이상 의존성으로 앱과 소비 라이브러리를 다시 컴파일한다.
 
 수식은 RaTeX의 KaTeX 기반 내장 글꼴로 계속 표시된다. 크기를 정하는 `bodyFont`와
 `fontSizePx`, 내부 `mathFontSizePx`, 색·블록 수식 정렬 설정은 유지한다. `bodyFont`의
@@ -191,7 +189,7 @@ RichMarkdown(markdown = message, codeBlocks = codeBlocks)
 미지원 언어·실패는 plain 코드 블록으로 되돌린다. ` ```mermaid ` 블록은 공식 Mermaid 11.17.2를 WebView에서
 그린다 — 원문 20,000바이트·edge 200·높이 4,032dp 한계와 실패 시 "오류 한 줄 + 원문" 표시는 iOS와 같다.
 
-### 블록 편집기 (opt-in, 릴리스 전)
+### 블록 편집기 (opt-in)
 
 Notion 스타일 블록 문서 편집기다. 논리 블록(제목·목록·할 일·인용·코드·수식)은 앱이 소유한
 `BlockEditorModel`에 두고, 화면에는 `EditText` 하나(`BlockDocumentEditText`)만 노출한다. 그래서 블록 경계와
@@ -477,14 +475,14 @@ paragraph 전체를 감싼 `$$ ... $$`는 여전히 block이다.
 - **Mermaid는 WebView가 있어야 한다.** WebView가 없는 환경에서는 원문 코드 블록으로 fail-open한다.
   모듈 assets 3.4 MB는 이 모듈을 채택한 앱에만 들어간다.
 - 원격 이미지 로딩은 v1 비목표다.
-- **블록 편집기는 릴리스 전이며 다음 한계가 있다.** 인용·코드·수식 블록의 오른쪽 여백은 적용하지 않고,
+- **블록 편집기에는 다음 한계가 있다.** 인용·코드·수식 블록의 오른쪽 여백은 적용하지 않고,
   문단 마지막 줄의 caret이 문단 간격만큼 길다. 편집할 때마다 문서 전체를 다시 스타일링하며 긴 문서 성능은
   측정하지 않았다. 블록 수식은 비트맵으로 그린다. Compose 래퍼는 무시된 편집을 다음 재구성에서 되돌린다.
-  실기기 IME·클립보드 확인과 배포 파일 검수는 아직이다. 상세는
+  실기기 Gboard 조합 중 도구 모음과 클립보드 왕복 확인은 아직이다. 상세는
   [편집기 개선 기록](docs/report/improvements/richmarkdown-editor.md).
 - 메시지 목록의 세로 스크롤·virtualization과 읽기 폭 제한은 소비 앱 몫이다.
 - 입력 상한·cache 상한 수치는 측정 전 잠정값이며 공개 API로 고정하지 않는다.
-- Maven Central은 아직 발행하지 않았다. GitHub Release의 `richmarkdown-android-0.2.0-maven.zip`에는 네 모듈(core·렌더러·highlight·mermaid)의 Release AAR/JAR·POM·Gradle metadata가 있어 로컬 Maven 저장소로 사용할 수 있다. 블록 편집기는 이 ZIP에 없다. 소스 체크아웃·`publishToMavenLocal`도 지원한다.
+- Maven Central은 아직 발행하지 않았다. GitHub Release의 `richmarkdown-android-0.3.0-maven.zip`에는 다섯 모듈(core·렌더러·highlight·mermaid·editor)의 Release AAR/JAR·POM·Gradle metadata가 있어 로컬 Maven 저장소로 사용할 수 있다. 소스 체크아웃·`publishToMavenLocal`도 지원한다.
 
 ---
 
@@ -500,7 +498,7 @@ paragraph 전체를 감싼 `$$ ... $$`는 여전히 block이다.
 | 수식 엔진 | RaTeX 0.1.14 |
 | 하이라이트 | Prism 1.30.0 + quickjs-kt 1.0.15 (opt-in) |
 | 다이어그램 | Mermaid 11.17.2 + Android WebView / androidx.webkit 1.17.0 (opt-in) |
-| 블록 편집기 | `EditText` + Compose `AndroidView` 래퍼 (opt-in, 릴리스 전) |
+| 블록 편집기 | `EditText` + Compose `AndroidView` 래퍼 (opt-in) |
 
 ### 모듈
 
@@ -510,12 +508,13 @@ paragraph 전체를 감싼 `$$ ... $$`는 여전히 block이다.
 | `richmarkdown` | 렌더 모델·수식 서비스·테마·Compose·View 렌더러 | `RichMarkdown` |
 | `richmarkdown-highlight` | opt-in. QuickJS + Prism 번들 | `RichMarkdownHighlight` |
 | `richmarkdown-mermaid` | opt-in. WebView + Mermaid 번들 | `RichMarkdownMermaid` |
-| `richmarkdown-editor` | opt-in, 릴리스 전. 블록 모델·인라인 코덱·EditText 편집 뷰·Compose 래퍼 | `RichMarkdownBlockEditor` |
+| `richmarkdown-editor` | opt-in. 블록 모델·인라인 코덱·EditText 편집 뷰·Compose 래퍼 | `RichMarkdownBlockEditor` |
 
 ### iOS 계약 대응
 
 | Android | iOS | 비고 |
 |---|---|---|
+| 0.3.0 | 0.9.1 | opt-in 블록 편집기(`RichMarkdownBlockEditor` 대응) 추가. 블록 모델·Markdown 계약 동일 |
 | 0.2.0 | 0.9.0 | 최신 요청 게시·입력 보호·Mermaid 수명 개선 |
 | 0.1.0 | 0.8.0 | 수식 문법·fail-open·스트리밍 규칙 동일. 수식 서체는 KaTeX 단일 |
 
@@ -548,7 +547,7 @@ paragraph 전체를 감싼 `$$ ... $$`는 여전히 block이다.
 
 ## GitHub Release의 Maven 저장소
 
-0.2.0 Release의 `richmarkdown-android-0.2.0-maven.zip`을 프로젝트의 `local-repository` 폴더에 풀고 저장소를 추가한다. 네 모듈의 metadata가 전이 의존성을 선언하며, 외부 의존성은 기존 Google Maven·Maven Central에서 해결한다.
+0.3.0 Release의 `richmarkdown-android-0.3.0-maven.zip`을 프로젝트의 `local-repository` 폴더에 풀고 저장소를 추가한다. 다섯 모듈(core·렌더러·highlight·mermaid·editor)의 metadata가 전이 의존성을 선언하며, 외부 의존성은 기존 Google Maven·Maven Central에서 해결한다.
 
 ```kotlin
 dependencyResolutionManagement {
@@ -560,7 +559,7 @@ dependencyResolutionManagement {
 }
 ```
 
-의존성 버전은 `0.2.0`으로 지정한다. 이 ZIP 배포는 Maven Central 최초 발행과 별개다. 블록 편집기 모듈은 0.2.0 ZIP에 없으므로 [블록 편집기 모듈](#블록-편집기-모듈-릴리스-전) 안내를 따른다.
+의존성 버전은 `0.3.0`으로 지정한다. 블록 편집기를 쓰면 `richmarkdown`과 같은 버전으로 지정한다([블록 편집기 모듈](#블록-편집기-모듈)). 이 ZIP 배포는 Maven Central 최초 발행과 별개다.
 
 ## 패키지 문서
 

@@ -1,8 +1,8 @@
 # richmarkdown-editor 명세
 
-기준일: 2026-10-08 · 현재 소스 확인 · 미배포 `[Unreleased]` 모듈 · 실행 결과는 [검수 기록](../validation.md#2026-10-08-블록-편집기-추가-검증)
+기준일: 2026-10-08 · 현재 소스 확인 · 0.3.0 배포 모듈 · 실행 결과는 [검수 기록](../validation.md#2026-10-08-030-릴리스-검증)
 
-[모듈 설정](../../../richmarkdown-editor/build.gradle.kts)은 네임스페이스 `io.github.jimmyjung.richmarkdown.editor`, minSdk 30, compileSdk 37을 선언하고 `richmarkdown`을 `api`로 노출합니다. 배포 좌표는 [모듈 속성](../../../richmarkdown-editor/gradle.properties)의 `io.github.jimmy-jung:richmarkdown-editor`로 정했지만, 이 모듈의 배포 파일 생성·검수는 아직 하지 않았습니다. 구조와 흐름은 [아키텍처](../architecture/richmarkdown-editor.md)에서 확인할 수 있습니다.
+[모듈 설정](../../../richmarkdown-editor/build.gradle.kts)은 네임스페이스 `io.github.jimmyjung.richmarkdown.editor`, minSdk 30, compileSdk 37을 선언하고 `richmarkdown`을 `api`로 노출합니다. 배포 좌표는 [모듈 속성](../../../richmarkdown-editor/gradle.properties)의 `io.github.jimmy-jung:richmarkdown-editor`이며, 0.3.0 배포 파일 생성·대조 결과는 [검수 기록](../validation.md#2026-10-08-030-릴리스-검증)에 있습니다. 구조와 흐름은 [아키텍처](../architecture/richmarkdown-editor.md)에서 확인할 수 있습니다.
 
 모든 범위는 Kotlin `String`과 같은 UTF-16 단위의 `[location, location + length)`입니다. 아래 요구 사항은 현재 소스의 동작을 설명하며, 실제 실행 통과는 검수 기록과 구분합니다.
 

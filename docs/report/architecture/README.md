@@ -1,6 +1,6 @@
 # RichMarkdown Android 전체 아키텍처
 
-기준일: 2026-10-08 · 구현 기준: `0.2.0` 릴리스 소스와 미배포 `[Unreleased]` 블록 편집기
+기준일: 2026-10-08 · 구현 기준: `0.3.0` 릴리스 소스(블록 편집기 포함)
 
 앱은 최신 전체 Markdown 문자열을 전달합니다. Core는 입력 제한·수식 구간 보호·파싱을
 담당하고 표시 모듈(`richmarkdown`)은 문서와 수식 결과를 Compose 또는 View에 표시합니다.
@@ -18,7 +18,7 @@ flowchart TD
     App["사용하는 앱"] --> Render["richmarkdown · Android"]
     App --> Highlight["richmarkdown-highlight · 선택"]
     App --> Diagram["richmarkdown-mermaid · 선택"]
-    App --> Editor["richmarkdown-editor · 선택 · 미배포"]
+    App --> Editor["richmarkdown-editor · 선택"]
     Highlight --> Render
     Diagram --> Render
     Editor --> Render

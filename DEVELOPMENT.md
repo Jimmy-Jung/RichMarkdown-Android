@@ -2,7 +2,7 @@
 
 - 작성일: 2026-09-15 (KST)
 - 수정일: 2026-10-08
-- 상태: 기존 P1·P2 구현 이후 미게시 0.2.0에 D4a를 반영했습니다. 2026-10-08 D1a로 opt-in 블록 편집기 모듈을 추가했으며 아직 릴리스하지 않았습니다(`CHANGELOG.md` [Unreleased]). 현재 minSdk는 30이며 최신 실행 검수·배포 상태는 [검수 기록](docs/report/validation.md)을 따릅니다. Maven Central에는 아직 발행하지 않았습니다.
+- 상태: 기존 P1·P2 구현 이후 0.2.0에 D4a를 반영했습니다. 2026-10-08 D1a로 추가한 opt-in 블록 편집기 모듈은 0.3.0에 포함합니다(`CHANGELOG.md` [0.3.0]). 현재 minSdk는 30이며 최신 실행 검수·배포 상태는 [검수 기록](docs/report/validation.md)을 따릅니다. Maven Central에는 아직 발행하지 않았습니다.
 
 이 문서는 2026-09-15 아키텍처 대화(architecture-dialogue)에서 확정한 결정 세트다. iOS
 [RichMarkdown](https://github.com/Jimmy-Jung/RichMarkdown)의 `DEVELOPMENT.md`에 대응하며,
@@ -65,7 +65,7 @@ LLM 채팅 메시지의 Markdown + GFM 표 + 인라인/블록 LaTeX + 코드 블
 |---|---|---|---|---|---|---|
 | D0 | 구축 전략 | confirmed | 신규 라이브러리. iOS 설계·fixture 이식, 파서·수식 엔진은 의존성 | huarangmeng 계약 상반(구분자 기본값·미닫힘 정책·코어 의존성 경계), 명칭 확보 불가 | D1~D9 | huarangmeng master 실측; iOS DEVELOPMENT.md §1·§2 |
 | D1 | v1 범위 | confirmed (BlockEditor 비목표만 superseded → D1a) | B: 코어 + Highlight + Mermaid. BlockEditor 비목표 | iOS 0.7.1 렌더 측 전체 동등 요구 | D4 필수, D6·D7 신설 | iOS Package.swift products; Docs/CODE_BLOCK_EXTENSIONS.md |
-| D1a | 블록 편집기 범위 | confirmed (supersedes D1의 BlockEditor 비목표, 2026-10-08 사용자 지시) | opt-in `richmarkdown-editor` 모듈 추가. iOS `RichMarkdownBlockEditor`의 순수 모델·코덱(`BlockEditorModel`·`EditorBlock`·`InlineMarkdownCodec`·클립보드 payload v1)을 이식하고, 화면은 `EditText` 하나의 연속 문서(`BlockDocumentEditText`) + Compose `AndroidView` 래퍼. 앱이 모델을 소유하고 렌더 모듈을 `api`로 의존 | 사용자 지시("안드로이드 블록 편집기능 추가 개발"). iOS와 같은 블록 모델·Markdown 계약이어야 두 플랫폼 문서가 같은 의미로 왕복. 렌더 모듈은 편집기에 의존하지 않아 기존 사용 앱 영향 없음 | 공개 모듈 5개(D8 좌표에 `richmarkdown-editor` 추가). `richmarkdown`의 span·글꼴 해석·칩 그리기를 `@InternalRichMarkdownApi`로 공개해 두 모듈은 같은 버전으로 배포. VERSION_NAME 0.2.0 유지, 다음 릴리스 전 미배포. iOS와 의도적 차이(문자 경계·서로게이트·줄바꿈·채움 문자·재동기화·조합 중 도구 모음 등)는 편집기 ADR-0002 | `settings.gradle.kts`, `richmarkdown-editor/build.gradle.kts`; [편집기 ADR](docs/report/adr/README.md#richmarkdown-editor-adr) |
+| D1a | 블록 편집기 범위 | confirmed (supersedes D1의 BlockEditor 비목표, 2026-10-08 사용자 지시) | opt-in `richmarkdown-editor` 모듈 추가. iOS `RichMarkdownBlockEditor`의 순수 모델·코덱(`BlockEditorModel`·`EditorBlock`·`InlineMarkdownCodec`·클립보드 payload v1)을 이식하고, 화면은 `EditText` 하나의 연속 문서(`BlockDocumentEditText`) + Compose `AndroidView` 래퍼. 앱이 모델을 소유하고 렌더 모듈을 `api`로 의존 | 사용자 지시("안드로이드 블록 편집기능 추가 개발"). iOS와 같은 블록 모델·Markdown 계약이어야 두 플랫폼 문서가 같은 의미로 왕복. 렌더 모듈은 편집기에 의존하지 않아 기존 사용 앱 영향 없음 | 공개 모듈 5개(D8 좌표에 `richmarkdown-editor` 추가). `richmarkdown`의 span·글꼴 해석·칩 그리기를 `@InternalRichMarkdownApi`로 공개해 두 모듈은 같은 버전으로 배포. 0.3.0에서 다섯 모듈을 함께 처음 배포. iOS와 의도적 차이(문자 경계·서로게이트·줄바꿈·채움 문자·재동기화·조합 중 도구 모음 등)는 편집기 ADR-0002 | `settings.gradle.kts`, `richmarkdown-editor/build.gradle.kts`; [편집기 ADR](docs/report/adr/README.md#richmarkdown-editor-adr) |
 | D2 | 플랫폼 타겟 | confirmed | Android 전용 + 순수 JVM 코어 모듈(`richmarkdown-core`, `@InternalRichMarkdownApi` opt-in) | 목표 Android, iOS는 Swift가 source of truth, WebView·View는 Android 전용, 전환 비용은 D3·D4 의존성이 결정 | D3·D4·D6 후보 전부 열림, 코어 fixture는 JVM 테스트 | 의존성 build.gradle.kts 타겟 실측; iOS §8 |
 | D3 | Markdown 파서 | confirmed | commonmark-java 0.30.0 + `ext-gfm-tables`·`ext-gfm-strikethrough`, `IncludeSourceSpans.BLOCKS_AND_INLINES` | iOS swift-markdown = cmark 계열 → 블록 구조 fixture 일치, spec 스위트, `SourceSpan.inputIndex`. 기각: JetBrains/markdown(계열 불일치·spec 통과율 미확인), vendoring(유지 비용) | 코어 JVM 전용, mask 단위 UTF-16 code unit, D3a | `SourceSpan.java` inputIndex; README Java 11·Android; `InlineParserImpl.java` List.of |
 | D3a | commonmark Android 호환 대응 | confirmed (split-from D3; D9a 이후 ①② 효력 없음, ③만 유효) | ① README·Gradle 안내에 coreLibraryDesugaring 필수 ② 파서 호출 경계에서 `NoSuchMethodError`/`NoClassDefFoundError`를 잡아 원문 fail-open + 로그 ③ upstream 이슈 commonmark/commonmark-java#457 등록(2026-09-16), PR은 반응 후 | `List.of` = API 30, desugar_jdk_libs jdk11 지원, PR #369 선례 | 소비 앱 요건 1개, fail-open 경로 1개. 외부 PR은 별도 승인 후 실행. upstream 머지 시 ①·② 제거 | desugar_jdk_libs `jdk11/.../ImmutableCollections.java`; commonmark `ci.yml` lint only |
@@ -145,7 +145,7 @@ RichMarkdown-Android/
 │                            Compose RichMarkdown()·View RichMarkdownView·코드 블록 확장 인터페이스
 ├─ richmarkdown-highlight/   opt-in. quickjs-kt + assets/prism/ (iOS 22파일 복사)
 ├─ richmarkdown-mermaid/     opt-in. androidx.webkit + assets/mermaid/ (iOS 3파일 복사)
-├─ richmarkdown-editor/      opt-in (D1a, 미배포). 블록 모델·인라인 코덱·EditText 편집 뷰·스타일러·Compose 래퍼
+├─ richmarkdown-editor/      opt-in (D1a, 0.3.0부터 배포). 블록 모델·인라인 코덱·EditText 편집 뷰·스타일러·Compose 래퍼
 ├─ scripts/sync-ios-assets.sh   ../RichMarkdown 자산 복사 + Docs SHA-256 대조
 └─ DEVELOPMENT.md · README.md · LICENSE · THIRD_PARTY_NOTICES.md · CHANGELOG.md
 ```
@@ -156,7 +156,7 @@ RichMarkdown-Android/
 | `richmarkdown` | `io.github.jimmy-jung:richmarkdown` | `RichMarkdown` |
 | `richmarkdown-highlight` | `io.github.jimmy-jung:richmarkdown-highlight` | `RichMarkdownHighlight` |
 | `richmarkdown-mermaid` | `io.github.jimmy-jung:richmarkdown-mermaid` | `RichMarkdownMermaid` |
-| `richmarkdown-editor` | `io.github.jimmy-jung:richmarkdown-editor` (다음 릴리스 예정, 미배포) | `RichMarkdownBlockEditor` |
+| `richmarkdown-editor` | `io.github.jimmy-jung:richmarkdown-editor` (0.3.0부터 배포) | `RichMarkdownBlockEditor` |
 
 빌드 산출물은 `-Prichmarkdown.buildRoot=<외부 경로>`로 저장소 밖에 둘 수 있다(루트 `build.gradle.kts`).
 

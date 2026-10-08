@@ -1,10 +1,10 @@
 # richmarkdown-editor 아키텍처
 
-기준일: 2026-10-08 · 현재 구현 확인 · 미배포 `[Unreleased]` 모듈
+기준일: 2026-10-08 · 현재 구현 확인 · 0.3.0 배포 모듈
 
 `richmarkdown-editor`는 Notion처럼 문서를 제목·목록·할 일·인용·코드·수식 블록으로 나눠 편집하는 선택형(opt-in) 모듈입니다. iOS `RichMarkdownBlockEditor`의 블록 모델과 Markdown 계약을 Kotlin으로 옮기고, 화면은 Android `EditText` 하나로 표시합니다. 렌더 모듈(`richmarkdown`)은 이 모듈에 의존하지 않으므로 편집기를 추가하지 않은 앱의 표시 동작은 바뀌지 않습니다.
 
-모듈은 [D1a](../../../DEVELOPMENT.md#2-결정-ledger)로 추가했으며 `VERSION_NAME`은 `0.2.0`에 머물러 있습니다. 0.2.0 Release 배포 파일에는 포함되지 않았습니다. 낯선 용어는 [용어 안내](../glossary.md#블록-편집기)에서 확인할 수 있습니다.
+모듈은 [D1a](../../../DEVELOPMENT.md#2-결정-ledger)로 추가했으며 0.3.0부터 다른 네 모듈과 같은 버전으로 Release 배포 파일에 포함합니다. 낯선 용어는 [용어 안내](../glossary.md#블록-편집기)에서 확인할 수 있습니다.
 
 관련 문서: [명세](../spec/richmarkdown-editor.md) · [ADR](../adr/README.md#richmarkdown-editor-adr) · [개선 기록](../improvements/richmarkdown-editor.md) · [검수 기록](../validation.md#2026-10-08-블록-편집기-추가-검증)
 

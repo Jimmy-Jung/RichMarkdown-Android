@@ -1,12 +1,38 @@
-# 0.2.0 릴리스 검수 기록
+# 0.3.0 릴리스 검수 기록
 
 기준일: 2026-10-08
 
-현재 구현·회귀 테스트·릴리스용 배포 파일을 확인한 기록입니다. 2026-10-08 절은 릴리스 뒤 추가한 미배포 블록 편집기의 검수입니다. 아래 실행 결과는 2026-10-06의 검사 기록이며, 문서 보완을 위해 앱 테스트를 다시 실행한 결과로 읽지 않습니다. 테스트 코드의 존재와 실행 성공을 구분하며, 적용·보류 항목은 [개선 기록](improvements/README.md)을 따릅니다. 검사 용어의 뜻은 [용어 안내](glossary.md)를 참고합니다.
+현재 구현·회귀 테스트·릴리스용 배포 파일을 확인한 기록입니다. 첫 절은 0.3.0 릴리스 게이트이고, 2026-10-08 블록 편집기 절은 0.2.0 릴리스 뒤 편집기를 추가했을 때의 검수입니다. 2026-10-06 실행 결과는 그날의 검사 기록이며, 문서 보완을 위해 앱 테스트를 다시 실행한 결과로 읽지 않습니다. 테스트 코드의 존재와 실행 성공을 구분하며, 적용·보류 항목은 [개선 기록](improvements/README.md)을 따릅니다. 검사 용어의 뜻은 [용어 안내](glossary.md)를 참고합니다.
+
+## 2026-10-08 0.3.0 릴리스 검증
+
+`VERSION_NAME`을 0.3.0으로 올린 소스(블록 편집기 커밋 `159fff4`~`1253fb4` 포함)로 릴리스 게이트를 실행했습니다. 계측 테스트는 `ANDROID_SERIAL`로 Pixel 6 프로필 에뮬레이터(Android 37.1 이미지, 16 KB 페이지) 한 대만 지정해 모듈별로 차례대로 실행했습니다. 단위 테스트는 이전 결과를 재사용하지 않도록 다시 실행했습니다.
+
+| 검사 | 결과 | 근거 범위 |
+| --- | --- | --- |
+| Core JVM | 105개 통과, 실패·제외 0 | `:richmarkdown-core:test` |
+| 표시 모듈 단위·계측 | 11개·21개 통과, 실패·제외 0 | `:richmarkdown:testDebugUnitTest`·`connectedDebugAndroidTest` |
+| Highlight 계측 | 18개 통과, 실패·제외 0 | `:richmarkdown-highlight:connectedDebugAndroidTest` |
+| Mermaid 계측 | 19개 통과, 실패·제외 0 | `:richmarkdown-mermaid:connectedDebugAndroidTest` |
+| 편집기 JVM·계측 | 62개·31개 통과, 실패·제외 0 | 계측은 스타일러 13개, 편집 뷰 15개, Compose 래퍼 3개. 아래 절의 30개에 줄 높이 회귀([AE-I14](improvements/richmarkdown-editor.md#ae-i14-서식-적용-시-한글-줄-높이-변화)) 1개 추가 |
+| 예제 앱 | 단위 7개 통과, `assembleDebug` 성공 | `:demo:testDebugUnitTest`·`assembleDebug` |
+| 정적 검사 | 편집기 `lintDebug` 오류 0·경고 3, 예제 앱 `lintDebug` 오류 0·경고 4 | 편집기 경고는 `UseTomlInstead` 3건. 예제 앱 경고는 `DataExtractionRules`·`UnusedResources`·`AlwaysShowAction`·`UseTomlInstead` 각 1건 |
+| Release 빌드 | 다섯 모듈 성공 | Core `assemble`, 나머지 네 모듈 `assembleRelease` |
+| 릴리스용 배포 파일 | 다섯 모듈 통과 | 아래 대조 |
+
+다섯 모듈을 저장소 밖의 빈 로컬 Maven 저장소에 `publishToMavenLocal`로 생성했습니다. 모듈마다 `io.github.jimmy-jung:<모듈>:0.3.0` 좌표의 Release AAR(Core는 JAR)·POM·Gradle metadata·sources JAR·Javadoc JAR가 있고, 저장소 내부 의존성은 모두 0.3.0을 가리킵니다. AAR 네 개의 minSdk는 30입니다. 기존 네 모듈의 POM 의존성 목록·이름·라이선스·SCM 값은 0.2.0 Release ZIP과 같습니다. 편집기 POM은 `richmarkdown` 0.3.0을 compile 범위(`api`)로 선언하고 Compose BOM 2026.09.00을 가져옵니다.
+
+이 저장소로 만든 `richmarkdown-android-0.3.0-maven.zip`은 항목 30개, 3,975,555바이트입니다. 0.2.0 ZIP과 같은 `io/github/jimmy-jung/<모듈>/` 배치에 편집기 디렉터리가 추가되었습니다. SHA-256은 `b63bd3081916d3452538380f16cf122ed94309b9c45fc4390c07ff9423bd535d`이며 함께 만든 `.sha256` 파일과 대조했습니다.
+
+다음은 이번 검증에서 확인하지 않았습니다.
+
+- ZIP을 별도 소비 프로젝트의 저장소로 추가해 의존성을 해결하는 확인은 하지 않았습니다.
+- 실기기 Gboard 조합 중 도구 모음·클립보드 왕복과 화면을 사람이 직접 보는 확인([AE-I12](improvements/richmarkdown-editor.md#ae-i12-실기기-ime클립보드화면-확인))은 여전히 하지 않았습니다.
+- Maven Central 발행과 서명은 이번 범위가 아닙니다.
 
 ## 2026-10-08 블록 편집기 추가 검증
 
-미배포 `richmarkdown-editor` 모듈(커밋 `159fff4`~`ffec7d7`)과 이 모듈을 위한 렌더 모듈의 내부 API 공개를 검사했습니다. 계측 테스트는 Pixel 6 프로필 에뮬레이터의 Android 37.1 이미지(16 KB 페이지)에서 실행했습니다. `VERSION_NAME`은 0.2.0 그대로이며 배포 파일은 만들지 않았습니다.
+당시 미배포였던 `richmarkdown-editor` 모듈(커밋 `159fff4`~`ffec7d7`)과 이 모듈을 위한 렌더 모듈의 내부 API 공개를 검사했습니다. 계측 테스트는 Pixel 6 프로필 에뮬레이터의 Android 37.1 이미지(16 KB 페이지)에서 실행했습니다. `VERSION_NAME`은 0.2.0 그대로이며 배포 파일은 만들지 않았습니다.
 
 | 검사 | 결과 | 근거 범위 |
 | --- | --- | --- |
@@ -73,4 +99,4 @@ iOS `Sources/RichMarkdownBlockEditor` Swift 소스를 컴파일해 모델·코�
 
 실제 GitHub·VSCode 미리보기의 표시, 투명 Excalidraw SVG의 다크 배경, 모든 사용자 환경·성능 상한·가능한 공격 입력 전체는 확인하지 않았습니다. 블록 편집기의 미확인 범위는 [2026-10-08 절](#2026-10-08-블록-편집기-추가-검증)과 [AE-I12](improvements/richmarkdown-editor.md#ae-i12-실기기-ime클립보드화면-확인)에 있습니다. 단위·계측 성공을 그 범위의 승인으로 확대하지 않습니다.
 
-로컬 Maven 저장소와 ZIP의 준비는 원격 발행과 별도 단계입니다. 0.2.0 ZIP에는 블록 편집기 모듈이 없습니다. 배포 파일과 원격 게시 상태는 [0.2.0 GitHub Release](https://github.com/Jimmy-Jung/RichMarkdown-Android/releases/tag/0.2.0)에서 확인합니다. 공유 자산의 원본 iOS 커밋과 해시는 각 모듈의 `SYNC-MANIFEST.txt`에 기록합니다. Maven Central 최초 발행은 별도 배포 경로입니다.
+로컬 Maven 저장소와 ZIP의 준비는 원격 발행과 별도 단계입니다. 0.3.0 ZIP에는 블록 편집기를 포함한 다섯 모듈이 있습니다. 배포 파일과 원격 게시 상태는 [0.3.0 GitHub Release](https://github.com/Jimmy-Jung/RichMarkdown-Android/releases/tag/0.3.0)에서 확인합니다. 공유 자산의 원본 iOS 커밋과 해시는 각 모듈의 `SYNC-MANIFEST.txt`에 기록합니다. Maven Central 최초 발행은 별도 배포 경로입니다.
