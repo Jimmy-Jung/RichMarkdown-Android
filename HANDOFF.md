@@ -1,14 +1,15 @@
 # HANDOFF — 작업 인계 보드
 
 - 작성자: JunyoungJung
-- 갱신: 2026-10-06 (KST)
+- 갱신: 2026-10-08 (KST)
 - 용도: 세션이 바뀌어도(예: `cc2` 프로필로 위임) 같은 지점에서 이어 가기 위한 상태판. 완료 항목은 체크하고 커밋에 포함한다.
 
 ## 현재 지점
 
-- 커밋: P1·P2 완료, minSdk 30(D9a), upstream 이슈 #457 등록, 복합 수식 상한 수정. 0.1.0 태그·GitHub Release(2026-10-06). 남은 항목: Maven Central 실제 발행(사용자 승인·자격 증명) 또는 JitPack 설정.
-- 설계 정본: `DEVELOPMENT.md`(결정 D0~D9·D3a, §8 P0 결과). API 계약: `docs/P1-CONTRACTS.md`.
-- 에뮬레이터: AVD `Pixel_6`(android-37.1, 16 KB 페이지). `API24_Pixel6`는 minSdk 30 이후 검증 대상이 아니다(참고용).
+- 커밋: P1·P2 완료, minSdk 30(D9a), upstream 이슈 #457 등록, 복합 수식 상한 수정. 0.1.0(2026-10-06)·0.2.0(`38a1db9`) 태그와 GitHub Release. 남은 항목: Maven Central 실제 발행(사용자 승인·자격 증명) 또는 JitPack 설정.
+- 블록 편집기(D1a, 2026-10-08): `richmarkdown-editor` 모듈·렌더 모듈 내부 API 공개·데모 화면·문서까지 로컬 커밋(`159fff4`~`ffec7d7` + 문서 커밋). push·태그·버전 변경은 하지 않았다(VERSION_NAME 0.2.0, CHANGELOG `[Unreleased]`). 남은 항목은 아래 «블록 편집기» 보드.
+- 설계 정본: `DEVELOPMENT.md`(결정 D0~D9·D1a·D3a·D4a·D9a, §8 P0 결과). API 계약: `docs/P1-CONTRACTS.md`, 편집기는 `docs/report/spec/richmarkdown-editor.md`.
+- 에뮬레이터: AVD `RichMarkdown_Validation`(pixel_6, android-37.1 `google_apis_ps16k`, 16 KB 페이지). AVD는 외장 SSD `$B/AndroidAVD`에 있으므로 `ANDROID_AVD_HOME="$B/AndroidAVD"`를 지정해야 보인다. 이전에 적던 `Pixel_6` AVD는 존재하지 않는다. `API24_Pixel6`는 minSdk 30 이후 검증 대상이 아니다(참고용).
 
 ## 빌드 환경 (외장 SSD 규칙, 필수)
 
@@ -23,7 +24,7 @@ export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:+$JAVA_TOOL_OPTIONS }-Djava.io.tmp
 ```
 
 - 동시 실행 금지. 여러 작업자가 있으면 `mkdir "$B/gradle.lock"` 성공한 쪽만 실행하고 끝나면 `rmdir`.
-- 에뮬레이터: `"$ANDROID_HOME/emulator/emulator" -avd Pixel_6 -no-window -no-audio -no-boot-anim -no-snapshot-save -gpu swiftshader_indirect &`
+- 에뮬레이터: `ANDROID_AVD_HOME="$B/AndroidAVD" "$ANDROID_HOME/emulator/emulator" -avd RichMarkdown_Validation -no-window -no-audio -no-boot-anim -no-snapshot-save -gpu swiftshader_indirect &`
 - 자산 갱신: `scripts/sync-ios-assets.sh` (iOS 저장소 `../RichMarkdown` 기준, SHA-256 대조).
 
 ## 작업 보드
@@ -46,6 +47,17 @@ export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:+$JAVA_TOOL_OPTIONS }-Djava.io.tmp
 - [x] Maven Central 발행 설정(vanniktech maven.publish 0.37.0, POM_* in gradle.properties, `publishToMavenLocal` 검증)
 - [ ] Maven Central 실제 발행 — 사용자 승인 + `~/.gradle/gradle.properties`에 mavenCentralUsername/Password·signingInMemoryKey/Password 설정 후 `./gradlew publishToMavenCentral -PRELEASE_SIGNING_ENABLED=true`
 - [x] upstream 이슈 등록: https://github.com/commonmark/commonmark-java/issues/457 (2026-09-16). PR은 유지보수자가 해법 1(치환)을 원하면 진행
+
+### 블록 편집기 (D1a, [Unreleased])
+- [x] `richmarkdown-editor` 모듈 + iOS 모델·코덱 이식(`159fff4`) — JVM 62/62, iOS Swift 소스 차등 비교(8,000건 차이 0, 이모지·결합 문자 1,500건 차이 113건 = 서로게이트 거절 81 + 코덱 UTF-16 순회 32)
+- [x] 렌더 모듈 span·글꼴 해석·칩 그리기 `@InternalRichMarkdownApi` 공개(`22985e3`) — `:richmarkdown` 단위 11/11·계측 21/21
+- [x] `BlockDocumentEditText`·`MarkdownStyler`·클립보드 payload·Compose 래퍼(`18a1fce`), 조합 중 도구 모음 확정(`eed41a3`) — 계측 30/30, `lintDebug` 오류 0
+- [x] 데모 `BlockEditorActivity` + 키보드 위 도구 모음(`ffec7d7`) — `:demo` 단위 7/7, `assembleDebug`·`lintDebug` 통과, 에뮬레이터 수동 확인, `verify-demo-ui.py` 통과
+- [x] `docs/report`(편집기 architecture·spec·ADR 0001/0002·improvements, validation 2026-10-08 절)·README·DEVELOPMENT D1a 갱신
+- [ ] 수식 글자 화면 표시를 사람이 직접 확인(캡처만 했고 보지 않음), `scripts/capture-demo-screens.sh` 실행해 `09-block-editor.png` 생성
+- [ ] 실기기 Gboard 조합 중 도구 모음·클립보드 왕복 확인
+- [ ] 미해결 개선: 오른쪽 여백(AE-I05), 마지막 줄 caret 높이(AE-I06), 전체 재스타일링 성능 측정(AE-I07), Compose 재동기화 지연(AE-I08), 블록 수식 벡터화(AE-I09), 데모 회전 시 문서 유지(AE-I11)
+- [ ] 다음 릴리스: VERSION_NAME 올리기, 다섯 모듈 `publishToMavenLocal`·배포 파일 대조·Release ZIP 재생성(사용자 승인 후)
 
 ## 위임 규칙 (cc2)
 

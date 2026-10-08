@@ -1,8 +1,8 @@
 # RichMarkdown Android 패키지 보고서
 
-기준일: 2026-10-06 · 구현 기준: `0.2.0` 릴리스 대상 소스
+기준일: 2026-10-08 · 구현 기준: `0.2.0` 릴리스 소스와 미배포 `[Unreleased]` 블록 편집기
 
-이 보고서는 RichMarkdown을 Android 앱에 연결하거나 수정할 개발자를 위한 문서입니다. 네 라이브러리 모듈이 맡는 일, 입력·반환값·실패 처리 규칙, 현재 구조를 선택한 이유를 설명합니다.
+이 보고서는 RichMarkdown을 Android 앱에 연결하거나 수정할 개발자를 위한 문서입니다. 다섯 라이브러리 모듈이 맡는 일, 입력·반환값·실패 처리 규칙, 현재 구조를 선택한 이유를 설명합니다.
 
 설명은 릴리스 대상 구현을 기준으로 [모듈 설정](../../settings.gradle.kts), 각 모듈의 소스와 테스트를 대조했습니다. 테스트 코드가 있다는 사실과 실제로 실행해 통과했다는 사실은 구분합니다.
 
@@ -32,10 +32,11 @@
 | `richmarkdown` | Compose·View의 문서·수식 표시 | [구조](architecture/richmarkdown.md) | [계약](spec/richmarkdown.md) | [결정](adr/README.md#richmarkdown-adr) |
 | `richmarkdown-highlight` | Prism을 이용한 코드 색칠 구간 계산 | [구조](architecture/richmarkdown-highlight.md) | [계약](spec/richmarkdown-highlight.md) | [결정](adr/README.md#richmarkdown-highlight-adr) |
 | `richmarkdown-mermaid` | 로컬 WebView 다이어그램 | [구조](architecture/richmarkdown-mermaid.md) | [계약](spec/richmarkdown-mermaid.md) | [결정](adr/README.md#richmarkdown-mermaid-adr) |
+| `richmarkdown-editor` | 블록 편집 모델·Markdown 코덱·EditText 편집 뷰 (미배포) | [구조](architecture/richmarkdown-editor.md) | [계약](spec/richmarkdown-editor.md) | [결정](adr/README.md#richmarkdown-editor-adr) |
 
-Gradle 모듈은 함께 빌드하는 소스와 의존성의 묶음입니다. 이 저장소의 배포 대상 라이브러리는 네 개이며, `richmarkdown-core`도 별도로 배포할 수 있는 JVM(Java Virtual Machine) 모듈입니다. Android 화면 API에 의존하지 않아 JVM에서 파싱 코드를 다룰 수 있습니다.
+Gradle 모듈은 함께 빌드하는 소스와 의존성의 묶음입니다. 이 저장소의 배포 대상 라이브러리는 다섯 개이며, `richmarkdown-core`도 별도로 배포할 수 있는 JVM(Java Virtual Machine) 모듈입니다. Android 화면 API에 의존하지 않아 JVM에서 파싱 코드를 다룰 수 있습니다.
 
-`demo`는 예제 앱, `spikes:prism-quickjs`는 엔진을 확인하는 실험 모듈입니다. Android에는 iOS의 `RichMarkdownBlockEditor`에 해당하는 라이브러리 모듈이 없습니다.
+`demo`는 예제 앱, `spikes:prism-quickjs`는 엔진을 확인하는 실험 모듈입니다. `richmarkdown-editor`는 iOS `RichMarkdownBlockEditor`에 대응하는 선택형 모듈이며, 2026-10-08 추가 후 아직 릴리스하지 않아 0.2.0 배포 파일에는 없습니다.
 
 ## 읽는 방법
 

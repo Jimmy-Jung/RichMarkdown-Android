@@ -7,6 +7,7 @@
 
 > **0.2.0 beta** — Compose·View 렌더러, 코드 블록 확장 2종, 데모 앱, iOS와 같은 RaTeX 수식 엔진.
 > GitHub Release 태그로 배포하며 Maven Central에는 아직 발행하지 않았다. `0.x`에서는 minor 버전에도 공개 API가 바뀔 수 있다.
+> opt-in 블록 편집기 `richmarkdown-editor`는 소스에 추가했지만 아직 릴리스하지 않았다(`[Unreleased]`). 0.2.0 배포 파일에는 없다.
 > 변경 내역은 [CHANGELOG.md](CHANGELOG.md)를 본다.
 
 iOS [RichMarkdown](https://github.com/Jimmy-Jung/RichMarkdown)과 **수식 문법·실패 처리·스트리밍 표시 규칙을 공유하는**
@@ -22,6 +23,8 @@ WebView 없이 네이티브로 렌더한다. Jetpack Compose는 `RichMarkdown()`
 
 - 코어는 WebView·JavaScript 런타임·이미지 로더를 링크하지 않는다. 코드 하이라이팅과 Mermaid는
   별도 opt-in 모듈이다.
+- iOS `RichMarkdownBlockEditor`에 대응하는 Notion 스타일 블록 편집기(`richmarkdown-editor`)도 opt-in 모듈이다.
+  렌더 모듈은 편집기에 의존하지 않는다. 아직 릴리스 전이다.
 - 스트리밍 입력(최신 전체 문자열)을 전제로 설계했다. coalescing + latest-wins.
 - 수식 문법·실패 정책·스트리밍 표시 규칙은 iOS와 같다. 설계 결정과 근거는
   [DEVELOPMENT.md](DEVELOPMENT.md)에 있다.
@@ -65,8 +68,17 @@ dependencies {
     // opt-in. 필요한 것만 추가한다.
     implementation("io.github.jimmy-jung:richmarkdown-highlight:0.2.0") // Prism + QuickJS
     implementation("io.github.jimmy-jung:richmarkdown-mermaid:0.2.0")   // 공식 Mermaid + WebView
+    // 블록 편집기 richmarkdown-editor는 0.2.0에 없다. 아래 «블록 편집기 모듈» 참고.
 }
 ```
+
+### 블록 편집기 모듈 (릴리스 전)
+
+`richmarkdown-editor`는 CHANGELOG `[Unreleased]` 변경이라 0.2.0 Release ZIP에 들어 있지 않다. 다음 릴리스 전에는
+이 저장소를 체크아웃해 데모 앱처럼 프로젝트 모듈로 빌드한다(`demo/build.gradle.kts`의
+`implementation(project(":richmarkdown-editor"))`). 배포 좌표는 `io.github.jimmy-jung:richmarkdown-editor`로 정했지만
+이 모듈의 Maven 배포 파일은 아직 만들거나 검수하지 않았다. 편집기는 렌더 모듈의 내부 API를 공유하므로
+`richmarkdown`과 같은 버전으로 함께 써야 한다.
 
 ### minSdk 30
 
@@ -174,6 +186,90 @@ RichMarkdown(markdown = message, codeBlocks = codeBlocks)
 미지원 언어·실패는 plain 코드 블록으로 되돌린다. ` ```mermaid ` 블록은 공식 Mermaid 11.17.2를 WebView에서
 그린다 — 원문 20,000바이트·edge 200·높이 4,032dp 한계와 실패 시 "오류 한 줄 + 원문" 표시는 iOS와 같다.
 
+### 블록 편집기 (opt-in, 릴리스 전)
+
+Notion 스타일 블록 문서 편집기다. 논리 블록(제목·목록·할 일·인용·코드·수식)은 앱이 소유한
+`BlockEditorModel`에 두고, 화면에는 `EditText` 하나(`BlockDocumentEditText`)만 노출한다. 그래서 블록 경계와
+상관없이 시스템 선택·복사·전체 선택이 동작한다. 한글 IME 조합과 수식 이미지 ↔ 원문 전환의 선택 경계 보정을 포함한다.
+
+```kotlin
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import io.github.jimmyjung.richmarkdown.editor.BlockEditorModel
+import io.github.jimmyjung.richmarkdown.editor.EditorRange
+import io.github.jimmyjung.richmarkdown.editor.EditorToolbarAction
+import io.github.jimmyjung.richmarkdown.editor.compose.BlockDocumentTextEditor
+
+@Composable
+fun NoteEditor(initialMarkdown: String) {
+    val model = remember { BlockEditorModel(initialMarkdown) }
+    var blocks by remember { mutableStateOf(model.blocks) }
+    var selection by remember { mutableStateOf(model.currentDocumentSelection) }
+    fun publish() {
+        blocks = model.blocks
+        selection = model.currentDocumentSelection
+    }
+
+    BlockDocumentTextEditor(
+        blocks = blocks,
+        selection = selection,
+        canUndo = model.canUndo,
+        canRedo = model.canRedo,
+        onReplaceText = { range, text -> model.replaceDocumentText(range, text).also { publish() } },
+        onSelectionChange = { model.updateDocumentSelection(it); publish() },
+        onToolbarAction = { action, range -> model.perform(action, range); publish() },
+        onReplaceDocumentBlocks = { range, pasted -> model.replaceDocumentBlocks(range, pasted).also { publish() } },
+        sourceMarkdown = model.markdown,
+    )
+}
+
+fun BlockEditorModel.perform(action: EditorToolbarAction, range: EditorRange) {
+    updateDocumentSelection(range)
+    val active = blockSelection(range) ?: return
+    when (action) {
+        is EditorToolbarAction.Transform -> transform(active.blockId, action.kind)
+        is EditorToolbarAction.Format -> applyInlineFormat(action.format, active.blockId, active.range)
+        EditorToolbarAction.Undo -> undo()
+        EditorToolbarAction.Redo -> redo()
+        else -> Unit // insert·indent·move 등은 demo의 BlockEditorActions.kt 참고
+    }
+}
+```
+
+View 앱은 `BlockDocumentEditText`를 직접 쓴다. 편집 콜백에서 모델을 바꿨으면 **같은 호출 안에서** `setState`로
+새 상태를 넘긴다. 넘기지 않으면 편집기는 모델이 편집을 반영하지 않은 것으로 보고 마지막 상태로 다시 그린다.
+
+```kotlin
+val model = BlockEditorModel(markdown)
+val editor = BlockDocumentEditText(context)
+fun publish() = editor.setState(
+    blocks = model.blocks,
+    selection = model.currentDocumentSelection,
+    canUndo = model.canUndo,
+    canRedo = model.canRedo,
+    sourceMarkdown = model.markdown,
+)
+editor.onReplaceText = { range, text -> model.replaceDocumentText(range, text).also { publish() } }
+editor.onSelectionChange = { model.updateDocumentSelection(it) }
+editor.onToolbarAction = { action, range -> model.perform(action, range); publish() }
+editor.onReplaceDocumentBlocks = { range, pasted -> model.replaceDocumentBlocks(range, pasted).also { publish() } }
+publish()
+```
+
+- **저장 포맷은 Markdown이다.** `model.markdown`으로 직렬화한다. `BlockEditorModel`은 Android 의존이 없어
+  Markdown 구조 조작에 단독으로 쓸 수 있다.
+- **키보드 도구 모음은 앱 책임이다.** `BlockEditorInputAccessory`를 구현해 `inputAccessory`로 넘기고, 버튼은 `bind`로
+  받은 함수를 호출한다. 그래야 편집기가 IME 조합을 확정한 뒤 현재 선택과 함께 명령을 보낸다. 데모의
+  `BlockEditorActivity`가 레퍼런스 구현이다.
+- **구조 보존 복사·붙여넣기.** 전체 선택 복사는 Markdown 일반 텍스트와 함께 블록 payload를
+  `application/vnd.richmarkdown.block-document+json` 형식으로 싣는다.
+- **편집기는 텍스트를 인스턴스 상태로 저장하지 않는다.** 화면 회전·프로세스 재생성 뒤 문서 유지는 앱이 `model.markdown`으로 처리한다.
+- iOS와 의도적으로 다른 동작(서로게이트 쌍 중간 범위 거절, 조합 중 도구 모음 명령은 조합을 확정한 뒤 실행 등)은
+  [편집기 ADR-0002](docs/report/adr/richmarkdown-editor-0002-intentional-ios-differences.md)에 있다.
+
 ### 데모 앱
 
 ```sh
@@ -185,6 +281,7 @@ RichMarkdown(markdown = message, codeBlocks = codeBlocks)
 | `ComposeChatActivity` · `ViewChatActivity` | 같은 대화를 두 렌더러로 재생. 달러 수식·케이스 라벨 토글 |
 | `SseStreamingActivity` | 로컬 시뮬레이션(5/20/60Hz) 또는 실제 SSE 엔드포인트 |
 | `ShowcaseActivity` | 전체 샘플 문서. 렌더러·Prism·Mermaid·다크 모드 전환 |
+| `BlockEditorActivity` | 블록 편집기. 키보드 위 도구 모음(블록 추가·종류 바꾸기·서식·들여쓰기·실행 취소·더보기·완료), `$` 수식 파싱·내보낸 Markdown 보기 |
 
 ---
 
@@ -373,10 +470,15 @@ paragraph 전체를 감싼 `$$ ... $$`는 여전히 block이다.
   없어 구현하지 않았다.
 - **Mermaid는 WebView가 있어야 한다.** WebView가 없는 환경에서는 원문 코드 블록으로 fail-open한다.
   모듈 assets 3.4 MB는 이 모듈을 채택한 앱에만 들어간다.
-- 원격 이미지 로딩, 블록 편집기(iOS `RichMarkdownBlockEditor`)는 v1 비목표다.
+- 원격 이미지 로딩은 v1 비목표다.
+- **블록 편집기는 릴리스 전이며 다음 한계가 있다.** 인용·코드·수식 블록의 오른쪽 여백은 적용하지 않고,
+  문단 마지막 줄의 caret이 문단 간격만큼 길다. 편집할 때마다 문서 전체를 다시 스타일링하며 긴 문서 성능은
+  측정하지 않았다. 블록 수식은 비트맵으로 그린다. Compose 래퍼는 무시된 편집을 다음 재구성에서 되돌린다.
+  실기기 IME·클립보드 확인과 배포 파일 검수는 아직이다. 상세는
+  [편집기 개선 기록](docs/report/improvements/richmarkdown-editor.md).
 - 메시지 목록의 세로 스크롤·virtualization과 읽기 폭 제한은 소비 앱 몫이다.
 - 입력 상한·cache 상한 수치는 측정 전 잠정값이며 공개 API로 고정하지 않는다.
-- Maven Central은 아직 발행하지 않았다. GitHub Release의 `richmarkdown-android-0.2.0-maven.zip`에는 네 모듈의 Release AAR/JAR·POM·Gradle metadata가 있어 로컬 Maven 저장소로 사용할 수 있다. 소스 체크아웃·`publishToMavenLocal`도 지원한다.
+- Maven Central은 아직 발행하지 않았다. GitHub Release의 `richmarkdown-android-0.2.0-maven.zip`에는 네 모듈(core·렌더러·highlight·mermaid)의 Release AAR/JAR·POM·Gradle metadata가 있어 로컬 Maven 저장소로 사용할 수 있다. 블록 편집기는 이 ZIP에 없다. 소스 체크아웃·`publishToMavenLocal`도 지원한다.
 
 ---
 
@@ -392,6 +494,7 @@ paragraph 전체를 감싼 `$$ ... $$`는 여전히 block이다.
 | 수식 엔진 | RaTeX 0.1.14 |
 | 하이라이트 | Prism 1.30.0 + quickjs-kt 1.0.15 (opt-in) |
 | 다이어그램 | Mermaid 11.17.2 + Android WebView / androidx.webkit 1.17.0 (opt-in) |
+| 블록 편집기 | `EditText` + Compose `AndroidView` 래퍼 (opt-in, 릴리스 전) |
 
 ### 모듈
 
@@ -401,6 +504,7 @@ paragraph 전체를 감싼 `$$ ... $$`는 여전히 block이다.
 | `richmarkdown` | 렌더 모델·수식 서비스·테마·Compose·View 렌더러 | `RichMarkdown` |
 | `richmarkdown-highlight` | opt-in. QuickJS + Prism 번들 | `RichMarkdownHighlight` |
 | `richmarkdown-mermaid` | opt-in. WebView + Mermaid 번들 | `RichMarkdownMermaid` |
+| `richmarkdown-editor` | opt-in, 릴리스 전. 블록 모델·인라인 코덱·EditText 편집 뷰·Compose 래퍼 | `RichMarkdownBlockEditor` |
 
 ### iOS 계약 대응
 
@@ -416,6 +520,8 @@ paragraph 전체를 감싼 `$$ ... $$`는 여전히 block이다.
 ./gradlew :richmarkdown-core:test                  # 코어 JVM 테스트 (파서·스캐너 fixture)
 ./gradlew :richmarkdown:testDebugUnitTest          # 렌더 모델·수식 서비스 로직
 ./gradlew :richmarkdown:connectedDebugAndroidTest  # 기기·에뮬레이터 필요
+./gradlew :richmarkdown-editor:testDebugUnitTest          # 블록 편집 모델·코덱 JVM 테스트
+./gradlew :richmarkdown-editor:connectedDebugAndroidTest  # 편집 뷰·IME·스타일러 (기기·에뮬레이터 필요)
 ./gradlew :demo:installDebug                       # 데모 앱 설치
 ```
 
@@ -448,7 +554,7 @@ dependencyResolutionManagement {
 }
 ```
 
-의존성 버전은 `0.2.0`으로 지정한다. 이 ZIP 배포는 Maven Central 최초 발행과 별개다.
+의존성 버전은 `0.2.0`으로 지정한다. 이 ZIP 배포는 Maven Central 최초 발행과 별개다. 블록 편집기 모듈은 0.2.0 ZIP에 없으므로 [블록 편집기 모듈](#블록-편집기-모듈-릴리스-전) 안내를 따른다.
 
 ## 패키지 문서
 
