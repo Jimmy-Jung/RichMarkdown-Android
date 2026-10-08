@@ -67,6 +67,7 @@ import kotlin.math.roundToInt
  *    조합 중에는 모델 알림·재스타일·텍스트 교체를 하지 않고 확정 시 조합 시작 범위로 한 번 보낸다.
  * 4. 전체 문서 복사의 블록 payload는 `ClipDescription` extras + [BLOCK_DOCUMENT_MIME_TYPE]로 싣는다.
  * 5. EditText 자체 undo는 쓰지 않는다 — Ctrl+Z·Ctrl+Shift+Z·메뉴 undo/redo는 [EditorToolbarAction.Undo]·[EditorToolbarAction.Redo]로 보낸다.
+ * 6. 조합 중 도구 모음 명령은 무시하지 않고 조합을 확정한 뒤 실행한다([performToolbarAction]). iOS는 marked text 중 무시한다.
  *
  * 기본 padding은 iOS `textContainerInset`(16, 16, 96, 16)에 맞춘 좌·위·우 16dp, 아래 96dp다. 앱이 `setPadding`으로 바꾼다.
  * 텍스트는 인스턴스 상태로 저장하지 않는다(모델이 원본이다).
@@ -139,15 +140,12 @@ class BlockDocumentEditText @JvmOverloads constructor(
 
     /**
      * 도구 모음 명령을 현재 선택과 함께 [onToolbarAction]으로 보낸다. iOS `Coordinator.handleToolbarAction`.
-     * 한글 등 IME 조합 중이면 무시하고 안내를 읽는다. [EditorToolbarAction.Done]은 포커스를 놓고 키보드를 닫는다.
+     * IME 조합 중이면 조합을 먼저 확정하고(확정 텍스트는 [onReplaceText]로 한 번만 간다) 확정 뒤 선택으로 명령을 보낸다.
+     * iOS는 marked text 중 명령을 무시하지만, Gboard 등 라틴 키보드는 입력 중인 단어 전체를 조합 영역으로 두므로
+     * 무시하면 영문 입력 중 도구 모음을 쓸 수 없다(의도적 차이). [EditorToolbarAction.Done]은 포커스를 놓고 키보드를 닫는다.
      */
     fun performToolbarAction(action: EditorToolbarAction) {
-        if (isComposing()) {
-            @Suppress("DEPRECATION")
-            announceForAccessibility(COMPOSING_ANNOUNCEMENT)
-            return
-        }
-        syncNow()
+        if (isComposing()) finishComposition() else syncNow()
         val range = currentSelection()
         if (action == EditorToolbarAction.Done) {
             clearFocus()
@@ -366,6 +364,16 @@ class BlockDocumentEditText @JvmOverloads constructor(
         pendingChangeCount = 0
         compositionStarted = false
         compositionRange = null
+    }
+
+    /**
+     * 조합 span을 지워 조합 중인 글자를 확정 텍스트로 바꾸고, 조합 시작 범위로 모델에 한 번 보낸 뒤 IME를 다시 시작한다.
+     * restartInput이 IME의 조합 상태를 버리므로 IME가 같은 글자를 다시 commit하지 않는다.
+     */
+    private fun finishComposition() {
+        BaseInputConnection.removeComposingSpans(text)
+        syncNow()
+        context.getSystemService(InputMethodManager::class.java)?.restartInput(this)
     }
 
     private fun isComposing(): Boolean {
@@ -727,6 +735,5 @@ class BlockDocumentEditText @JvmOverloads constructor(
 
         private const val CLIP_LABEL = "RichMarkdown document"
         private const val ACCESSIBILITY_HINT = "문서 편집기"
-        private const val COMPOSING_ANNOUNCEMENT = "한글 입력을 완료한 후 편집 도구를 사용하세요"
     }
 }

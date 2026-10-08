@@ -35,7 +35,7 @@ interface BlockEditorInputAccessory {
 
     /**
      * 편집기에 붙을 때 명령 전달 함수를 받는다. 도구 모음 버튼은 이 함수로 명령을 보낸다
-     * (iOS `makeInputAccessory`의 `onAction` 인자). 한글 조합 중이면 편집기가 명령을 무시하고 안내를 읽는다.
+     * (iOS `makeInputAccessory`의 `onAction` 인자). IME 조합 중이면 편집기가 조합을 확정한 뒤 명령을 보낸다(iOS는 무시).
      */
     fun bind(perform: (EditorToolbarAction) -> Unit) = Unit
 }

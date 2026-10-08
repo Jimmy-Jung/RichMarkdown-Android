@@ -253,24 +253,61 @@ class BlockDocumentEditTextTest {
 
     // MARK: - 도구 모음·단축키
 
+    /**
+     * Android 차이: 조합 중 명령은 무시하지 않고 조합을 확정한 뒤 보낸다(iOS는 무시). 확정 텍스트는 한 번만 모델에 가고,
+     * 명령은 확정 뒤 선택을 받는다. 한글 음절과 Gboard식 라틴 단어 조합 모두 같다.
+     */
     @Test
-    fun toolbarIsIgnoredWhileComposingAndUsesCurrentSelection() = onMain {
+    fun toolbarCommitsCompositionOnceThenUsesCommittedSelection() = onMain {
+        val bold = EditorToolbarAction.Format(InlineFormat.Bold)
+        for ((composing, committed) in listOf(listOf("ㅎ", "하", "한") to "한", listOf("h", "he", "hello") to "hello")) {
+            val view = newView()
+            val model = BlockEditorModel(listOf(EditorBlock(text = "가")))
+            model.updateDocumentSelection(r(1, 0))
+            val host = ModelHost(view, model)
+            val connection = view.onCreateInputConnection(EditorInfo())!!
+            for (text in composing) connection.setComposingText(text, 1)
+            assertTrue(host.replacements.isEmpty())
+
+            view.performToolbarAction(bold)
+
+            val caret = r(1 + committed.length, 0)
+            assertEquals(listOf(r(1, 0) to committed), host.replacements)
+            assertEquals(listOf(bold to caret), host.actions)
+            assertTrue("조합이 끝나야 한다", !connection.isComposing(view))
+            assertEquals("가$committed\n", model.documentText)
+            assertEquals(model.documentText, view.text.toString())
+            assertEquals(caret, view.selection())
+            // 낡은 연결의 조합 종료는 이미 확정된 글자를 다시 보내지 않는다.
+            connection.finishComposingText()
+            assertEquals(1, host.replacements.size)
+            // 확정 뒤 Enter·선택·명령 경로는 평소대로다.
+            view.onCreateInputConnection(EditorInfo())!!.commitText("\n", 1)
+            assertEquals(listOf(r(1, 0) to committed, caret to "\n"), host.replacements)
+            assertEquals(model.documentText, view.text.toString())
+            view.setSelection(0, 1)
+            view.performToolbarAction(EditorToolbarAction.Indent)
+            assertEquals(EditorToolbarAction.Indent to r(0, 1), host.actions.last())
+        }
+    }
+
+    /** Gboard는 caret이 단어 안에 들어오면 기존 단어를 조합 영역으로 잡는다. 텍스트가 그대로면 모델 편집 없이 명령만 간다. */
+    @Test
+    fun toolbarDuringRecomposedExistingWordSendsNoReplacement() = onMain {
         val view = newView()
-        val model = BlockEditorModel(listOf(EditorBlock(text = "가")))
-        model.updateDocumentSelection(r(1, 0))
+        val model = BlockEditorModel(listOf(EditorBlock(text = "hello world")))
+        model.updateDocumentSelection(r(3, 0))
         val host = ModelHost(view, model)
         val connection = view.onCreateInputConnection(EditorInfo())!!
-        val bold = EditorToolbarAction.Format(InlineFormat.Bold)
+        connection.setComposingRegion(0, 5)
+        assertTrue(connection.isComposing(view))
 
-        connection.setComposingText("ㅎ", 1)
-        view.performToolbarAction(bold)
-        assertTrue(host.actions.isEmpty())
+        view.performToolbarAction(EditorToolbarAction.Duplicate)
 
-        connection.commitText("한", 1)
-        view.performToolbarAction(bold)
-        view.setSelection(0, 2)
-        view.performToolbarAction(EditorToolbarAction.Indent)
-        assertEquals(listOf(bold to r(2, 0), EditorToolbarAction.Indent to r(0, 2)), host.actions)
+        assertTrue(host.replacements.isEmpty())
+        assertEquals(listOf(EditorToolbarAction.Duplicate to r(3, 0)), host.actions)
+        assertTrue(!connection.isComposing(view))
+        assertEquals(model.documentText, view.text.toString())
     }
 
     /** EditText 자체 undo 대신 모델 undo/redo로 보낸다(Ctrl+Z, Ctrl+Shift+Z, 메뉴). */

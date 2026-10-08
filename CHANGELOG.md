@@ -26,6 +26,12 @@ semver다. `0.x`에서는 minor 버전에서도 공개 API가 바뀔 수 있다.
   `RichMarkdownFont.resolveTypeface()`·`RichMarkdownFont.textSizePx(context)`·`RichMarkdownTheme.resolvedTextColor(isDark)`와
   칩 그리기(`InlineCodeChipPainter`)를 `@InternalRichMarkdownApi`(opt-in)로 공개한다. 뷰어 동작은 그대로다.
 
+### Fixed
+
+- `richmarkdown-editor`: IME 조합 중 도구 모음 명령을 무시하던 동작을 고친다. 조합을 확정해 모델에 한 번 전달하고 IME를 다시 시작한 뒤
+  확정 선택으로 명령을 보낸다. Gboard 등 라틴 키보드는 입력 중 단어 전체를 조합 영역으로 두어 영문 입력 중 도구 모음이 막혔다.
+  iOS는 marked text 중 명령을 무시한다(의도적 차이).
+
 ### Not yet
 
 - Maven Central 실제 발행(사용자 승인), commonmark-java upstream PR(D3a ③).
