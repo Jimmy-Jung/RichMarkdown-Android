@@ -50,6 +50,11 @@ WebView 없이 네이티브로 렌더한다. Jetpack Compose는 `RichMarkdown()`
 | <img src="docs/screenshots/01-showcase-compose.png" alt="array와 두 underbrace로 나눈 복합 수식부터 시작하는 Compose 쇼케이스" width="260"> | <img src="docs/screenshots/02-showcase-view.png" alt="같은 복합 수식과 샘플 문서를 View 렌더러로 표시한 쇼케이스" width="260"> |
 | `array`·`\underbrace` 복합 수식을 시작으로 수식, Markdown, 표, 코드 등 전체 샘플을 순서대로 살펴본다. 넓은 수식은 가로로 스크롤한다. | 같은 원문을 두 렌더러로 비교하며 옵션 메뉴에서 표시 설정을 바꾼다. |
 
+| 블록 편집기 | 블록 편집기 · 도구 모음 |
+|---|---|
+| <img src="docs/screenshots/09-block-editor.png" alt="회의 노트 제목으로 시작하는 샘플 문서와 화면 아래 도구 모음을 표시한 블록 편집기" width="260"> | <img src="docs/screenshots/10-block-editor.gif" alt="제목 끝에 단어를 입력하고 선택해 굵게를 적용한 뒤 블록 종류를 인용으로 바꾸고 실행 취소한 다음 할 일 블록을 추가하는 블록 편집기 데모" width="260"> |
+| 제목·목록·할 일·인용·코드·수식 블록이 섞인 샘플 문서를 `EditText` 하나에서 이어진 문서로 편집한다. 릴리스 전 opt-in 모듈이다. | 제목 끝에 입력한 `Phase3`를 선택해 굵게를 적용하고 블록 종류를 인용으로 바꾼다. 도구 모음을 밀어 실행 취소로 제목 1로 되돌린 뒤 블록 추가로 할 일 블록을 넣는다. 메뉴를 여는 동안에도 키보드는 내려가지 않는다. |
+
 ### SSE 스트리밍
 
 <img src="docs/screenshots/05-sse-streaming.gif" alt="SSE 조각이 도착하면서 수식·표·코드가 채워지는 데모" width="260">
@@ -191,6 +196,7 @@ RichMarkdown(markdown = message, codeBlocks = codeBlocks)
 Notion 스타일 블록 문서 편집기다. 논리 블록(제목·목록·할 일·인용·코드·수식)은 앱이 소유한
 `BlockEditorModel`에 두고, 화면에는 `EditText` 하나(`BlockDocumentEditText`)만 노출한다. 그래서 블록 경계와
 상관없이 시스템 선택·복사·전체 선택이 동작한다. 한글 IME 조합과 수식 이미지 ↔ 원문 전환의 선택 경계 보정을 포함한다.
+데모에서 서식·블록 종류·실행 취소·블록 추가를 차례로 쓰는 화면은 [스크린샷](#스크린샷)의 블록 편집기 GIF에 있다.
 
 ```kotlin
 import androidx.compose.runtime.Composable
