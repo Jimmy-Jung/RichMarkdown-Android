@@ -1,6 +1,6 @@
 # richmarkdown-editor 개선 기록
 
-기준일: 2026-10-08 · 상태: **AE-I01~AE-I04 구현·회귀 추가, AE-I05~AE-I13 미해결**
+기준일: 2026-10-08 · 상태: **AE-I01~AE-I04·AE-I14 구현·회귀 추가, AE-I05~AE-I13 미해결**
 
 블록 편집기를 iOS에서 옮기면서 iOS 동작과 다르게 고친 항목과, 이번 작업에서 남긴 한계를 구분합니다. 근거는 [편집기 소스](../../../richmarkdown-editor/src/main/kotlin/io/github/jimmyjung/richmarkdown/editor/), [JVM 테스트](../../../richmarkdown-editor/src/test/), [Android 테스트](../../../richmarkdown-editor/src/androidTest/)입니다. 미해결 항목의 문구는 소스의 `ponytail:` 주석과 KDoc에 적힌 한계를 따릅니다. 실행 결과는 [검수 기록](../validation.md#2026-10-08-블록-편집기-추가-검증)에 있습니다.
 
@@ -73,6 +73,14 @@
 ## AE-I13: Maven 배포 파일 생성과 검수
 
 **상태: 미실행.** `richmarkdown-editor`에 Maven 발행 설정과 POM 값을 추가했지만 `publishToMavenLocal`을 포함한 배포 파일 생성·대조는 하지 않았습니다. 0.2.0 Release ZIP에는 이 모듈이 없습니다. 다음 릴리스에서 버전을 올린 뒤 다른 네 모듈과 함께 생성·대조합니다.
+
+## AE-I14: 서식 적용 시 한글 줄 높이 변화
+
+**상태: 구현·회귀 추가.** `BlockDocumentEditText`의 `isFallbackLineSpacing`을 끕니다.
+
+- **문제 상황:** 실기기(SM-G988N, Android 13)에서 제목 일부에 굵게를 걸면 글자 굵기는 그대로인데 줄 높이가 커졌습니다. 측정 결과 서체 객체와 글꼴 metrics는 같았고, 기본값인 fallback 줄 간격이 켜져 있을 때만 굵게·기울임 span이 줄을 여러 run으로 나누면서 한글 fallback 글꼴의 metrics가 줄 높이에 더해졌습니다(제목 137→149px, 본문 92→99px). 끈 상태에서는 두 경우 모두 높이가 같았습니다.
+- **회귀:** `inlineEmphasisKeepsLineHeight`는 제목과 본문에서 굵게 전후의 첫 줄 높이를 비교합니다. 에뮬레이터(API 37)와 SM-G988N(Android 13)에서 통과했습니다.
+- **남은 한계:** fallback 글꼴이 주 글꼴보다 큰 문자(태국어 등)는 줄 경계를 조금 넘어 그려질 수 있습니다. 렌더 모듈의 `TextView`·Compose 텍스트는 이 설정을 바꾸지 않았으므로, 한글 줄에서 굵게가 섞인 줄의 높이가 다른 줄과 다를 수 있는지는 확인하지 않았습니다.
 
 ## iOS 측 관찰
 

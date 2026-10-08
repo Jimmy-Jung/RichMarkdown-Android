@@ -34,6 +34,8 @@ semver다. `0.x`에서는 minor 버전에서도 공개 API가 바뀔 수 있다.
 - `richmarkdown-editor`: IME 조합 중 도구 모음 명령을 무시하던 동작을 고친다. 조합을 확정해 모델에 한 번 전달하고 IME를 다시 시작한 뒤
   확정 선택으로 명령을 보낸다. Gboard 등 라틴 키보드는 입력 중 단어 전체를 조합 영역으로 두어 영문 입력 중 도구 모음이 막혔다.
   iOS는 marked text 중 명령을 무시한다(의도적 차이).
+- `richmarkdown-editor`: 한글 줄에 굵게·기울임을 걸면 줄 높이가 커지던 문제를 고친다(SM-G988N 실측 제목 137→149px).
+  `BlockDocumentEditText`의 `isFallbackLineSpacing`을 끈다. span이 줄을 여러 run으로 나눌 때 한글 fallback 글꼴 metrics가 줄 높이에 더해졌다.
 
 ### Not yet
 

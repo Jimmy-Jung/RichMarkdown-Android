@@ -261,6 +261,10 @@ class BlockDocumentEditText @JvmOverloads constructor(
         gravity = Gravity.TOP or Gravity.START
         inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
         imeOptions = imeOptions or EditorInfo.IME_FLAG_NO_ENTER_ACTION
+        // 기본값(true)이면 굵게·기울임 span이 줄을 여러 run으로 나눌 때 한글 fallback 글꼴의 metrics가 줄 높이에 더해져
+        // 서식만 바꿔도 줄이 커진다(SM-G988N 실측: 제목 137→149px, 본문 92→99px). 끄면 서식과 무관하게 줄 높이가 고정된다.
+        // ponytail: fallback 글꼴이 주 글꼴보다 큰 문자(태국어 등)는 줄 경계를 조금 넘어 그려질 수 있다 — 잘림이 보고되면 다시 본다.
+        isFallbackLineSpacing = false
         tag = VIEW_TAG
         addTextChangedListener(watcher)
         ready = true

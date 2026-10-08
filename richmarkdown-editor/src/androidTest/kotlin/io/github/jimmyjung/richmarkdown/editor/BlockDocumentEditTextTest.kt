@@ -370,6 +370,23 @@ class BlockDocumentEditTextTest {
         assertEquals(RichMarkdownTheme.Default.textColor.light, view.text.paintAt(0).color)
     }
 
+    // MARK: - 줄 높이
+
+    /** 한글 줄에 굵게를 걸어도 줄 높이가 바뀌지 않는다 (fallbackLineSpacing 회귀, SM-G988N 제목 137→149px). */
+    @Test
+    fun inlineEmphasisKeepsLineHeight() = onMain {
+        val view = newView()
+        for (kind in listOf<EditorBlockKind>(EditorBlockKind.Heading(1), Paragraph)) {
+            fun lineHeight(bold: Boolean): Int {
+                val marks = if (bold) listOf(InlineMark(InlineFormat.Bold, r(6, 6))) else emptyList()
+                view.setState(listOf(EditorBlock(kind = kind, text = "회의 노트 Phase3", inlineMarks = marks)), null, canUndo = false, canRedo = false)
+                layout(view, 1080)
+                return view.layout.getLineBottom(0) - view.layout.getLineTop(0)
+            }
+            assertEquals("$kind", lineHeight(bold = false), lineHeight(bold = true))
+        }
+    }
+
     private fun layout(view: View, width: Int) {
         view.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
         view.layout(0, 0, width, view.measuredHeight)
