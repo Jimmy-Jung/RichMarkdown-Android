@@ -68,7 +68,8 @@
 - 에뮬레이터 스크린샷의 수식 글자 표시를 사람이 직접 보지 않았습니다. 첫 확인에서 목록·체크박스·인용·칩·서식은 정상이었고 수식은 테스트의 글꼴 로딩 순서 때문에 비어 있었습니다. 순서는 고쳤지만 고친 뒤의 화면은 보지 않았습니다.
 - 실제 Gboard 소프트 키보드의 조합과 도구 모음 누르기는 계측 테스트의 IME 연결 호출로만 확인했습니다.
 - 실기기 클립보드 복사·붙여넣기는 확인하지 않았습니다.
-- `scripts/capture-demo-screens.sh`에 추가한 `09-block-editor.png` 촬영은 실행하지 않았습니다.
+- 블록 편집 정지컷·GIF(`09-block-editor.png`·`10-block-editor.gif`)는 `ONLY=block-editor scripts/capture-demo-screens.sh emulator-5554`로 에뮬레이터에서만 촬영했고, 프레임은 사람이 직접 보지 않았습니다.
+- 하드웨어 키보드의 Ctrl+Z 전달은 미해결·미확인입니다. 2026-10-08 에뮬레이터(Gboard)에서 `adb shell input text`로 ` Phase3`를 입력하고 단어를 선택해 굵게·인용 변환을 적용한 뒤 `input keycombination KEYCODE_CTRL_LEFT KEYCODE_Z`를 보내자, 인용 변환은 그대로이고 마지막 입력 글자 `3`만 지워졌습니다. Gboard가 키를 먼저 처리해 편집기 `onKeyShortcut`의 모델 undo까지 오지 않은 것으로 보이며 원인은 확인하지 않았습니다. 글자 입력 없이 종류만 바꾼 뒤의 Ctrl+Z는 같은 에뮬레이터에서 모델 undo로 되돌아갔습니다. 같은 날 실기기 SM-G988N(삼성 키보드)에서는 선택 뒤 Ctrl+Z가 모델 undo로 전달되었습니다. 실제 하드웨어 키보드에서는 확인하지 않았으므로 데모 GIF는 도구 모음의 실행 취소 버튼을 누릅니다.
 
 ## AE-I13: Maven 배포 파일 생성과 검수
 

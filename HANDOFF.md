@@ -54,7 +54,8 @@ export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:+$JAVA_TOOL_OPTIONS }-Djava.io.tmp
 - [x] `BlockDocumentEditText`·`MarkdownStyler`·클립보드 payload·Compose 래퍼(`18a1fce`), 조합 중 도구 모음 확정(`eed41a3`) — 계측 30/30, `lintDebug` 오류 0
 - [x] 데모 `BlockEditorActivity` + 키보드 위 도구 모음(`ffec7d7`) — `:demo` 단위 7/7, `assembleDebug`·`lintDebug` 통과, 에뮬레이터 수동 확인, `verify-demo-ui.py` 통과
 - [x] `docs/report`(편집기 architecture·spec·ADR 0001/0002·improvements, validation 2026-10-08 절)·README·DEVELOPMENT D1a 갱신
-- [ ] 수식 글자 화면 표시를 사람이 직접 확인(캡처만 했고 보지 않음), `scripts/capture-demo-screens.sh` 실행해 `09-block-editor.png` 생성
+- [x] `ONLY=block-editor scripts/capture-demo-screens.sh emulator-5554`로 `09-block-editor.png`·`10-block-editor.gif` 생성 — 에뮬레이터에서만 촬영, 스크립트가 접근성 트리·내보낸 Markdown으로 결과 확인, 프레임은 사람이 보지 않음
+- [ ] 수식 글자 화면 표시와 블록 편집 정지컷·GIF를 사람이 직접 확인(캡처만 했고 보지 않음)
 - [ ] 실기기 Gboard 조합 중 도구 모음·클립보드 왕복 확인
 - [ ] 미해결 개선: 오른쪽 여백(AE-I05), 마지막 줄 caret 높이(AE-I06), 전체 재스타일링 성능 측정(AE-I07), Compose 재동기화 지연(AE-I08), 블록 수식 벡터화(AE-I09), 데모 회전 시 문서 유지(AE-I11)
 - [ ] 다음 릴리스: VERSION_NAME 올리기, 다섯 모듈 `publishToMavenLocal`·배포 파일 대조·Release ZIP 재생성(사용자 승인 후)

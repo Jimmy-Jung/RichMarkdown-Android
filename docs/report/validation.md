@@ -26,7 +26,7 @@ iOS `Sources/RichMarkdownBlockEditor` Swift 소스를 컴파일해 모델·코�
 - 에뮬레이터 화면의 수식 글자 표시는 캡처했지만 사람이 직접 보지 않았습니다. 첫 확인에서 수식이 비어 있던 원인(테스트의 글꼴 로딩 순서)은 고쳤으나 고친 뒤의 화면은 보지 않았습니다.
 - 실제 Gboard 소프트 키보드의 조합 중 도구 모음 누르기는 계측 테스트의 IME 연결 호출로만 확인했습니다.
 - 실기기 클립보드, 긴 문서의 편집 성능, 예제 앱 화면 회전 뒤 문서 유지(현재 첫 문서로 돌아감)는 확인하지 않았습니다.
-- `scripts/capture-demo-screens.sh`의 블록 편집 화면 촬영은 실행하지 않았습니다.
+- 블록 편집 정지컷·GIF(`09-block-editor.png`·`10-block-editor.gif`)는 이후 `ONLY=block-editor scripts/capture-demo-screens.sh emulator-5554`로 에뮬레이터에서만 촬영했습니다. 스크립트가 녹화 중 접근성 트리와 녹화 뒤 내보낸 Markdown으로 결과를 확인하지만, 프레임은 사람이 직접 보지 않았습니다.
 - 편집기 모듈의 Maven 배포 파일 생성(`publishToMavenLocal` 포함)과 대조는 실행하지 않았습니다.
 
 ## 2026-10-07 API 정리 후 재검증

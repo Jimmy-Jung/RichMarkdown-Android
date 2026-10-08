@@ -128,8 +128,10 @@ PYMENU
 }
 
 scroll_toolbar() { # <누를 x> <뗄 x> — 키보드 위 도구 모음의 가로 스크롤 영역을 끈다
-  adb shell input swipe "$1" "$TOOLBAR_Y" "$2" "$TOOLBAR_Y" 300
-  sleep 0.5
+  # 녹화 부하로 한 번 끌기가 끝까지 닿지 않을 때가 있어 두 번 끌어 스크롤 끝에 붙인다.
+  adb shell input swipe "$1" "$TOOLBAR_Y" "$2" "$TOOLBAR_Y" 250
+  adb shell input swipe "$1" "$TOOLBAR_Y" "$2" "$TOOLBAR_Y" 250
+  sleep 0.4
 }
 
 block_editor_actions() { # <블록 추가> <블록 종류> <굵게> <실행 취소> 각 "x1 y1 x2 y2" — 녹화하는 동안 실행하는 조작
@@ -142,9 +144,9 @@ block_editor_actions() { # <블록 추가> <블록 종류> <굵게> <실행 취�
   tap_center $2; sleep 0.8; tap_block_menu 인용
   ui_dump; ui_bounds "블록 종류 바꾸기, 현재 블록: 인용" >/dev/null   # 덤프하는 동안 인용 상태를 보여준다
   # Ctrl+Z는 Gboard가 마지막 입력 글자 취소로 먼저 가져가므로 도구 모음의 실행 취소 버튼을 누른다.
-  scroll_toolbar "${SCROLL_TO_END[@]}"; tap_center $4; sleep 1.2
+  scroll_toolbar "${SCROLL_TO_END[@]}"; tap_center $4; sleep 1
   scroll_toolbar "${SCROLL_TO_START[@]}"; tap_center $1; sleep 0.8; tap_block_menu "할 일"; sleep 0.6
-  adb shell input text "Update%sREADME"; sleep 2.5   # 반복 재생 전에 결과 화면을 보여준다
+  adb shell input text "Update%sREADME"; sleep 2   # 반복 재생 전에 결과 화면을 보여준다
 }
 
 if [ "$ONLY" = all ]; then
@@ -175,6 +177,19 @@ read -r _ top right _ <<<"$document"
 # 제목 줄 끝에 caret을 두면 키보드와 도구 모음이 올라온다 (verify-demo-ui.py와 같은 위치).
 adb shell input tap $((right - 30 * DENSITY / 160)) $((top + 32 * DENSITY / 160))
 sleep 1.5
+# 제목 1은 기본 글꼴이 굵어 굵게가 보이지 않으므로, 편집 문서 텍스트에서 다음 본문 문단 길이를 읽어
+# caret을 그 문단 끝으로 옮긴다 (줄바꿈 1개 + 문단 글자 수만큼 →).
+moves="$(python3 - "$WORK/ui.xml" <<'PYMOVE'
+import sys, xml.etree.ElementTree as ET
+text = next(n.get("text") for n in ET.parse(sys.argv[1]).iter("node") if n.get("class") == "android.widget.EditText")
+paragraph = text.split("\n")[1]
+assert paragraph.startswith("오늘 목표"), "제목 다음 줄이 예상한 본문 문단이 아닙니다: " + paragraph
+print(1 + len(paragraph))
+PYMOVE
+)"
+# 한 번에 몰아 보내면 데모의 선택 재동기화보다 빨라 일부 이동이 사라진다. 키마다 adb를 따로 부른다.
+for ((i = 0; i < moves; i++)); do adb shell input keyevent KEYCODE_DPAD_RIGHT; done
+sleep 0.5
 ui_dump
 add="$(ui_bounds "블록 추가")"
 kind="$(ui_bounds "블록 종류 바꾸기")"
@@ -193,17 +208,20 @@ undo="$(ui_bounds "실행 취소")"
 scroll_toolbar "${SCROLL_TO_START[@]}"
 block_editor_actions "$add" "$kind" "$bold" "$undo" &
 record_gif 10-block-editor.gif 30 $!
-# GIF가 의도한 결과로 끝났는지 내보낸 Markdown으로 확인한다 (굵게 유지·실행 취소로 제목 1 복귀·새 할 일).
+# GIF가 의도한 결과로 끝났는지 내보낸 Markdown으로 확인한다 (문단 끝 굵게 유지·실행 취소로 문단 복귀·새 할 일).
 ui_dump; options="$(ui_bounds "렌더 옵션")"; tap_center $options
 ui_dump; toggle="$(ui_bounds "Markdown 보기")"; tap_center $toggle
 adb shell input keyevent 4
 ui_dump
 python3 - "$WORK/ui.xml" <<'PYCHECK'
 import sys, xml.etree.ElementTree as ET
-expected = "# 회의 노트 **Phase3**\n- [ ] Update README\n"
 texts = [node.get("text") or "" for node in ET.parse(sys.argv[1]).iter("node")]
-assert any(text.startswith(expected) for text in texts), "블록 편집 GIF의 최종 Markdown이 예상과 다릅니다"
-print("  [check] 내보낸 Markdown: " + expected.replace("\n", "⏎"))
+markdown = next((text for text in texts if text.startswith("# 회의 노트\n")), None)
+assert markdown, "내보낸 Markdown이 제목 1 '회의 노트'로 시작하지 않습니다"
+lines = markdown.split("\n")
+assert lines[1].startswith("**오늘 목표**") and lines[1].endswith(" **Phase3**") and lines[2] == "- [ ] Update README", (
+    "블록 편집 GIF의 최종 Markdown이 예상과 다릅니다: %r" % lines[:3])
+print("  [check] 내보낸 Markdown 2~3행: " + " ⏎ ".join(lines[1:3]))
 PYCHECK
 
 adb shell am force-stop "$PKG" >/dev/null
