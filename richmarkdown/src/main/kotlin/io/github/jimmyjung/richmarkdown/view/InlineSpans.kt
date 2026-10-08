@@ -22,22 +22,29 @@ import android.view.View
 import io.github.jimmyjung.richmarkdown.RenderedMath
 import io.github.jimmyjung.richmarkdown.RichMarkdownTheme
 import io.github.jimmyjung.richmarkdown.core.InlineContent
+import io.github.jimmyjung.richmarkdown.core.InternalRichMarkdownApi
 import io.github.jimmyjung.richmarkdown.core.InlineRun
 import io.github.jimmyjung.richmarkdown.core.MathSegment
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 /**
- * 인라인 코드 구간 마커. 아무것도 그리지 않는다 — `ChipTextView`가 이 범위 뒤에 칩을 칠한다
+ * 인라인 코드 구간 마커. 아무것도 그리지 않는다 — [InlineCodeChipPainter]가 이 범위 뒤에 칩을 칠한다
  * (iOS `NSAttributedString.Key.inlineCodeChip` + `InlineCodeDecorationView`).
+ *
+ * 편집기 모듈이 쓰는 내부 API — 예고 없이 바뀔 수 있음.
  */
-internal class InlineCodeChipSpan
+@InternalRichMarkdownApi
+class InlineCodeChipSpan
 
 /**
  * 서체와 굵기·기울임을 한 span에서 정한다. `TypefaceSpan(Typeface)`는 API 28+라 대신 쓰고,
  * `StyleSpan`과 적용 순서가 엇갈려 굵기를 잃는 문제도 피한다 (iOS `styled(_:bold:italic:)`).
+ *
+ * 편집기 모듈이 쓰는 내부 API — 예고 없이 바뀔 수 있음.
  */
-internal class TypefaceStyleSpan(private val typeface: Typeface, private val style: Int) : MetricAffectingSpan() {
+@InternalRichMarkdownApi
+class TypefaceStyleSpan(private val typeface: Typeface, private val style: Int) : MetricAffectingSpan() {
     override fun updateMeasureState(paint: TextPaint) = apply(paint)
     override fun updateDrawState(paint: TextPaint) = apply(paint)
 
@@ -56,8 +63,11 @@ internal class TypefaceStyleSpan(private val typeface: Typeface, private val sty
  *
  * `getSize`가 `ascent = -ceil(ascentPx)`, `descent = ceil(descentPx)`를 보고해 줄 높이를 늘리고,
  * `draw`는 baseline `y`에서 `ascentPx`만큼 위에 bitmap 상단을 놓는다. 색은 raster에 이미 들어 있다.
+ *
+ * 편집기 모듈이 쓰는 내부 API — 예고 없이 바뀔 수 있음.
  */
-internal class MathAttachmentSpan(private val rendered: RenderedMath) : ReplacementSpan() {
+@InternalRichMarkdownApi
+class MathAttachmentSpan(private val rendered: RenderedMath) : ReplacementSpan() {
     override fun getSize(paint: Paint, text: CharSequence, start: Int, end: Int, fm: Paint.FontMetricsInt?): Int {
         if (fm != null) {
             fm.ascent = -ceil(rendered.ascentPx).toInt()

@@ -14,6 +14,12 @@ semver다. `0.x`에서는 minor 버전에서도 공개 API가 바뀔 수 있다.
 - iOS와 다른 점: grapheme 경계는 `BreakIterator`, surrogate pair 중간 범위는 거절, Markdown 입력·문서 교체의
   CRLF·CR은 LF로 정규화, fence 트림은 Swift `.whitespaces`(Zs + 탭) 규칙.
 
+### Changed
+
+- `richmarkdown`: 편집기가 재사용하는 `InlineCodeChipSpan`·`TypefaceStyleSpan`·`MathAttachmentSpan`·
+  `RichMarkdownFont.resolveTypeface()`·`RichMarkdownFont.textSizePx(context)`·`RichMarkdownTheme.resolvedTextColor(isDark)`와
+  칩 그리기(`InlineCodeChipPainter`)를 `@InternalRichMarkdownApi`(opt-in)로 공개한다. 뷰어 동작은 그대로다.
+
 ### Not yet
 
 - Maven Central 실제 발행(사용자 승인), commonmark-java upstream PR(D3a ③).

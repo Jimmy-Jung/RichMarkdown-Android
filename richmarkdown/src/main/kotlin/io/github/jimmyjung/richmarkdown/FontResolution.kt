@@ -8,6 +8,7 @@ import android.graphics.Typeface
 import android.os.Build
 import android.util.TypedValue
 import androidx.annotation.ColorInt
+import io.github.jimmyjung.richmarkdown.core.InternalRichMarkdownApi
 
 /**
  * 값 타입 [RichMarkdownFont]·[RichMarkdownTheme]를 Android 그래픽 타입으로 해석하는 공용 헬퍼.
@@ -18,8 +19,11 @@ import androidx.annotation.ColorInt
  * `Typeface` 해석. [RichMarkdownFont.Design.Custom]은 앱이 등록한 family 이름으로 찾고, 없으면
  * 시스템 기본으로 물러난다(`Typeface.create(String, Int)` 동작). [RichMarkdownFont.Design.Rounded]는
  * Android에 대응 서체가 없어 [RichMarkdownFont.Design.Default]와 같다.
+ *
+ * 편집기 모듈이 쓰는 내부 API — 예고 없이 바뀔 수 있음.
  */
-internal fun RichMarkdownFont.resolveTypeface(): Typeface {
+@InternalRichMarkdownApi
+fun RichMarkdownFont.resolveTypeface(): Typeface {
     val base: Typeface = when (val d = design) {
         RichMarkdownFont.Design.Default, RichMarkdownFont.Design.Rounded -> Typeface.SANS_SERIF
         RichMarkdownFont.Design.Monospaced -> Typeface.MONOSPACE
@@ -35,10 +39,20 @@ internal fun RichMarkdownFont.resolveTypeface(): Typeface {
     }
 }
 
-/** 시스템 fontScale을 적용한 텍스트 크기(px). 수식 raster의 `fontSizePx`도 이 값을 쓴다. */
-internal fun RichMarkdownFont.textSizePx(context: Context): Float =
+/**
+ * 시스템 fontScale을 적용한 텍스트 크기(px). 수식 raster의 `fontSizePx`도 이 값을 쓴다.
+ *
+ * 편집기 모듈이 쓰는 내부 API — 예고 없이 바뀔 수 있음.
+ */
+@InternalRichMarkdownApi
+fun RichMarkdownFont.textSizePx(context: Context): Float =
     TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, unscaledSizeSp, context.resources.displayMetrics)
 
-/** 본문 색. 수식 raster key의 `colorArgb`도 이 값이다. 다른 색은 `theme.<색>.resolve(isDark)`로 읽는다. */
+/**
+ * 본문 색. 수식 raster key의 `colorArgb`도 이 값이다. 다른 색은 `theme.<색>.resolve(isDark)`로 읽는다.
+ *
+ * 편집기 모듈이 쓰는 내부 API — 예고 없이 바뀔 수 있음.
+ */
+@InternalRichMarkdownApi
 @ColorInt
-internal fun RichMarkdownTheme.resolvedTextColor(isDark: Boolean): Int = textColor.resolve(isDark)
+fun RichMarkdownTheme.resolvedTextColor(isDark: Boolean): Int = textColor.resolve(isDark)
