@@ -2,7 +2,7 @@
 // Date: 2026-09-15
 //
 // 데모 앱 (iOS Examples/RichMarkdownDemo 대응). 미발행. Compose 채팅·View(RecyclerView) 채팅·
-// SSE 스트리밍·샘플 쇼케이스 화면으로 라이브러리 3모듈을 실제 앱 형태로 검증한다.
+// SSE 스트리밍·샘플 쇼케이스·블록 편집 화면으로 라이브러리 4모듈을 실제 앱 형태로 검증한다.
 
 plugins {
     alias(libs.plugins.android.application)
@@ -37,6 +37,8 @@ dependencies {
     implementation(project(":richmarkdown"))
     implementation(project(":richmarkdown-highlight"))
     implementation(project(":richmarkdown-mermaid"))
+    // 블록 편집 데모 (iOS BlockEditorDemoView).
+    implementation(project(":richmarkdown-editor"))
 
     val composeBom = platform(libs.compose.bom)
     implementation(composeBom)

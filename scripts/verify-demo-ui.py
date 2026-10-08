@@ -63,7 +63,7 @@ def launch(activity):
 
 launch("MainActivity")
 home = screen("home")
-for label in ["AI 챗봇 (Compose)", "AI 챗봇 (View)", "SSE 실시간 렌더링 (Compose)",
+for label in ["AI 챗봇 (Compose)", "AI 챗봇 (View)", "SSE 실시간 렌더링 (Compose)", "블록 편집 (Compose)",
               "코드 블록 확장 (Mermaid · Prism)", "샘플 쇼케이스 (Compose · View)"]:
     find(home, label)
 tap(home, "AI 챗봇 (Compose)")
@@ -133,6 +133,30 @@ sse = screen("sse-complete")
 find(sse, "완료 ([DONE])")
 find(sse, "시작")
 assert any("오차함수로 쓰면" in n.get("text", "") for n in sse.iter("node")), "최종 답변 미표시"
+
+launch("BlockEditorActivity")
+editor = screen("block-editor")
+document = next(n for n in editor.iter("node") if n.get("class") == "android.widget.EditText")
+assert document.get("text", "").startswith("회의 노트"), "블록 편집기 미표시"
+for label in ["블록 추가", "블록 종류 바꾸기, 현재 블록: 제목 1", "굵게", "기울임", "취소선", "인라인 코드", "키보드 닫기"]:
+    find(editor, label)
+# 제목 줄 끝에 caret을 두고 영문을 입력한 뒤 그 단어를 선택해 도구 모음의 굵게를 적용한다.
+density = int(re.search(rb"(\d+)", adb("shell", "wm", "density")).group(1)) / 160
+_, y1, x2, _ = map(int, re.findall(r"\d+", document.get("bounds")))
+adb("shell", "input", "tap", str(x2 - int(30 * density)), str(y1 + int(32 * density)))
+time.sleep(1)
+adb("shell", "input", "text", "%sPhase3")
+adb("shell", "input", "keycombination", "KEYCODE_SHIFT_LEFT", "KEYCODE_CTRL_LEFT", "KEYCODE_DPAD_LEFT")
+time.sleep(0.5)
+editor = screen("block-editor-typed")
+assert any(n.get("text", "").startswith("회의 노트 Phase3") for n in editor.iter("node")), "입력한 글자 미반영"
+tap(editor, "굵게")
+tap(screen("block-editor-bold"), "렌더 옵션")
+tap(screen("block-editor-options"), "Markdown 보기")
+adb("shell", "input", "keyevent", "4")
+editor = screen("block-editor-markdown")
+assert any(n.get("text", "").startswith("# 회의 노트 **Phase3**") for n in editor.iter("node")), "굵게가 내보낸 Markdown에 없음"
+tap(editor, "키보드 닫기")
 print(json.dumps({"result": "passed", "checks": ["home", "chat-order", "chat-replay-bottom", "labels", "back",
-    "native-chat-restart", "code-renderers", "dark", "sse-speed-stop-restart-complete"],
+    "native-chat-restart", "code-renderers", "dark", "sse-speed-stop-restart-complete", "block-editor-type-bold-export"],
     "evidence": str(OUTPUT)}, ensure_ascii=False))

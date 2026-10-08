@@ -41,5 +41,10 @@
             android:exported="true"
             android:label="@string/title_sse"
             android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".BlockEditorActivity"
+            android:exported="true"
+            android:label="@string/title_block_editor"
+            android:windowSoftInputMode="adjustResize" />
     </application>
 </manifest>

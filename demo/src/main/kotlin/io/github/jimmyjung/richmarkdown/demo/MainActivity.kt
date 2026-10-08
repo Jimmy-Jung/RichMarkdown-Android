@@ -35,6 +35,7 @@ private val entries = listOf(
     Entry("AI 챗봇 (Compose)", ComposeChatActivity::class.java),
     Entry("AI 챗봇 (View)", ViewChatActivity::class.java),
     Entry("SSE 실시간 렌더링 (Compose)", SseStreamingActivity::class.java),
+    Entry("블록 편집 (Compose)", BlockEditorActivity::class.java),
     Entry("코드 블록 확장 (Mermaid · Prism)", ShowcaseActivity::class.java, codeExtensions = true),
     Entry("샘플 쇼케이스 (Compose · View)", ShowcaseActivity::class.java),
 )

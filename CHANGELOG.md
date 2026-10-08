@@ -19,6 +19,9 @@ semver다. `0.x`에서는 minor 버전에서도 공개 API가 바뀔 수 있다.
 - 편집 뷰의 iOS와 다른 점: 표시 문자열이 `documentText`와 같다(U+2063 보충 문자 없음, 수식은 원문 위 span),
   모델이 무시·변형한 편집 뒤에도 최신 상태로 다시 그려 화면 == 모델, `InputConnection`을 감싸 IME 확정을 감지,
   trailing indent(인용·코드·수식 오른쪽 여백)는 적용하지 않는다.
+- 데모 `BlockEditorActivity`(iOS `BlockEditorDemoView`): 앱이 소유한 `BlockEditorModel`과 `BlockDocumentTextEditor`,
+  키보드 위 가로 스크롤 도구 모음(블록 추가·종류 바꾸기·서식·들여쓰기·실행 취소·더보기·완료, `BlockEditorInputAccessory`),
+  `$ 수식 파싱`·내보낸 Markdown 보기 옵션. 홈 목록·`capture-demo-screens.sh`·`verify-demo-ui.py`에 추가.
 
 ### Changed
 

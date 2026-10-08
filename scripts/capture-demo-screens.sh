@@ -4,7 +4,7 @@
 #
 # 데모 앱 스크린샷·SSE 스트리밍 GIF를 다시 만든다 (iOS `scripts/capture-sse-gifs.sh` 대응).
 # 전제: 대상 기기에 최신 `demo` 디버그 APK 설치, adb·ffmpeg·python3 사용 가능.
-# 산출물: 홈·쇼케이스·채팅·코드 확장·SSE 정지컷 8장과 05-sse-streaming.gif
+# 산출물: 홈·쇼케이스·채팅·코드 확장·SSE·블록 편집 정지컷 9장과 05-sse-streaming.gif
 #
 # 사용: scripts/capture-demo-screens.sh [ADB_SERIAL] [OUT_DIR]
 set -euo pipefail
@@ -59,6 +59,7 @@ launch ViewChatActivity;  shot 04-chat-view.png
 launch ShowcaseActivity --es section code --es renderer compose; shot 06-code-compose.png
 launch ShowcaseActivity --es section code --es renderer view;    shot 07-code-view.png
 launch SseStreamingActivity;                             shot 08-sse-idle.png
+launch BlockEditorActivity;                              shot 09-block-editor.png
 fi
 
 echo "[2/2] SSE 스트리밍 GIF (${SSE_SECONDS}s)"
