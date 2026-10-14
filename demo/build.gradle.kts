@@ -19,6 +19,7 @@ android {
         targetSdk = libs.versions.compileSdk.get().toInt()
         versionCode = 1
         versionName = "0.1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     compileOptions {
@@ -29,6 +30,16 @@ android {
 
     buildFeatures {
         compose = true
+    }
+
+    buildTypes {
+        // :benchmark-macro 대상. release와 같되 디버그 키로 서명해 실기기에 바로 설치한다. 프로파일은 manifest <profileable>.
+        create("benchmark") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            isDebuggable = false
+            matchingFallbacks += listOf("release")
+        }
     }
 }
 
@@ -59,4 +70,10 @@ dependencies {
 
     // SSE 프레임 디코더 단위 테스트 (JVM, JUnit4).
     testImplementation("junit:junit:4.13.2")
+
+    // 데모 화면 접근성 검사 (ATF AccessibilityValidator). 에뮬레이터에서 connectedDebugAndroidTest로 실행한다.
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.accessibility.test.framework)
 }

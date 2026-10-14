@@ -1,0 +1,107 @@
+# Author: JunyoungJung
+# Date: 2026-10-14
+#
+# 커밋마다 도는 게이트 (iOS 저장소 Docs/report/verification 그림 5와 같은 순서).
+# 빌드 → JVM 테스트(fixture·병리 입력·퍼즈 1만 회 포함) → 커버리지 기준 → lint·정적 분석.
+# 에뮬레이터 계측 테스트와 퍼즈 10만 회는 workflow_dispatch로 실행한다. 실기기 벤치마크는 scripts/run-benchmarks.sh.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      fuzz_iterations:
+        description: "Core 퍼즈 반복 횟수 (기본 10000, 릴리스 전 100000)"
+        required: false
+        default: "10000"
+      instrumented:
+        description: "에뮬레이터 계측 테스트 실행"
+        type: boolean
+        default: false
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RICHMARKDOWN_FUZZ_ITERATIONS: ${{ github.event.inputs.fuzz_iterations || '10000' }}
+
+# 액션은 커밋 SHA로 고정한다(태그는 옮겨질 수 있다, semgrep github-actions-mutable-action-tag). 주석이 버전이다.
+jobs:
+  jvm:
+    name: JVM 테스트 · 커버리지 · lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - name: fixture 해시 검사 (iOS 정본 복사본)
+        run: python3 scripts/verify-fixtures.py
+      - name: JVM 테스트
+        run: >
+          ./gradlew --console=plain
+          :richmarkdown-core:test :richmarkdown:testDebugUnitTest
+          :richmarkdown-editor:testDebugUnitTest :demo:testDebugUnitTest
+      - name: 커버리지 기준 (Kover)
+        run: ./gradlew --console=plain koverVerify koverXmlReport
+      - name: lint (라이브러리 · 데모)
+        run: >
+          ./gradlew --console=plain
+          :richmarkdown:lintDebug :richmarkdown-highlight:lintDebug :richmarkdown-mermaid:lintDebug
+          :richmarkdown-editor:lintDebug :demo:lintDebug
+      - name: 결과 보존
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: jvm-reports
+          path: |
+            **/build/reports/
+            **/build/test-results/
+          retention-days: 14
+
+  static-analysis:
+    name: 정적 분석 (semgrep)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: semgrep (kotlin · OWASP Top 10 · secrets)
+        run: |
+          pipx install semgrep
+          semgrep scan --metrics=off --error \
+            --config p/kotlin --config p/owasp-top-ten --config p/secrets \
+            --exclude build --exclude assets --exclude demo \
+            richmarkdown-core richmarkdown richmarkdown-highlight richmarkdown-mermaid richmarkdown-editor scripts
+
+  instrumented:
+    name: 에뮬레이터 계측 테스트 (수동)
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.instrumented == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - name: KVM 허용
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - name: 계측 테스트 (API 34 x86_64)
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          script: >
+            ./gradlew --console=plain
+            :richmarkdown:connectedDebugAndroidTest :richmarkdown-highlight:connectedDebugAndroidTest
+            :richmarkdown-mermaid:connectedDebugAndroidTest :richmarkdown-editor:connectedDebugAndroidTest

@@ -9,6 +9,7 @@ plugins {
     // RichMarkdownDiagramRendering.Content가 @Composable이다 (AndroidView 래핑).
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.maven.publish)
+    alias(libs.plugins.kover)
 }
 
 group = providers.gradleProperty("GROUP").get()
@@ -24,6 +25,14 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    buildTypes {
+        debug {
+            // 계측 테스트 커버리지(JaCoCo, createDebugAndroidTestCoverageReport). JVM 단위 테스트는 Kover가 집계하므로
+            // enableUnitTestCoverage는 켜지 않는다(두 에이전트가 같은 테스트를 이중 계측하지 않게).
+            enableAndroidTestCoverage = true
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -31,6 +40,16 @@ android {
 
     buildFeatures {
         compose = true
+    }
+}
+
+// 공유 fixture(iOS 코퍼스 동기화본, richmarkdown-core 소유·읽기 전용)를 androidTest assets로 노출한다.
+// AGP 9에서는 legacy `android.sourceSets[...]` 접근이 configuration을 깨므로 Variant Sources API를 쓴다.
+androidComponents {
+    onVariants { variant ->
+        variant.androidTest?.sources?.assets?.addStaticSourceDirectory(
+            rootDir.resolve("richmarkdown-core/src/test/resources").path,
+        )
     }
 }
 

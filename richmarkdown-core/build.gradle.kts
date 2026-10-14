@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     `java-library`
     alias(libs.plugins.maven.publish)
+    alias(libs.plugins.kover)
 }
 
 group = providers.gradleProperty("GROUP").get()
@@ -43,6 +44,16 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+    // 공용 fixture 러너·퍼즈(iOS Tests/Fixtures/README.md §4·§6)의 환경 변수를 테스트 JVM에 전달한다.
+    // 데몬의 환경이 오래됐을 수 있으니 이 변수를 쓰는 실행은 --no-daemon으로 돌린다.
+    // Test 작업은 environment를 입력으로 추적하지 않으므로 입력 속성으로도 등록한다(퍼즈 횟수만 바꿔도 다시 실행).
+    listOf("RICHMARKDOWN_FIXTURE_OUT", "RICHMARKDOWN_FUZZ_ITERATIONS", "RICHMARKDOWN_FUZZ_SEED", "RICHMARKDOWN_FUZZ_DUMP")
+        .forEach { name ->
+            providers.environmentVariable(name).orNull?.let {
+                environment(name, it)
+                inputs.property(name, it)
+            }
+        }
 }
 
 // Maven Central 발행 (D8). 좌표 io.github.jimmy-jung:<POM_ARTIFACT_ID>:<VERSION_NAME>.
@@ -50,4 +61,16 @@ tasks.test {
 mavenPublishing {
     publishToMavenCentral()
     if (providers.gradleProperty("RELEASE_SIGNING_ENABLED").orNull == "true") signAllPublications()
+}
+
+// CI 커버리지 기준(`./gradlew koverVerify`). Core는 JVM 단위 테스트로 거의 전부 실행되므로 90%를 하한으로 둔다.
+// 표시·하이라이트·Mermaid·편집기 화면 경로는 계측 테스트(수동 job)의 JaCoCo 보고서로 본다.
+kover {
+    reports {
+        verify {
+            rule {
+                minBound(90)
+            }
+        }
+    }
 }

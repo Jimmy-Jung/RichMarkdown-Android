@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.maven.publish)
+    alias(libs.plugins.kover)
 }
 
 group = providers.gradleProperty("GROUP").get()
@@ -21,6 +22,14 @@ android {
         minSdk = libs.versions.minSdk.get().toInt()
         consumerProguardFiles("consumer-rules.pro")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        debug {
+            // 계측 테스트 커버리지(JaCoCo, createDebugAndroidTestCoverageReport). JVM 단위 테스트는 Kover가 집계하므로
+            // enableUnitTestCoverage는 켜지 않는다(두 에이전트가 같은 테스트를 이중 계측하지 않게).
+            enableAndroidTestCoverage = true
+        }
     }
 
     compileOptions {

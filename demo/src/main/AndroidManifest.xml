@@ -14,6 +14,9 @@
         android:theme="@style/Theme.RichMarkdownDemo"
         android:usesCleartextTraffic="false">
 
+        <!-- Macrobenchmark(:benchmark-macro)가 release 성격의 benchmark 빌드를 shell에서 프로파일한다. 다른 빌드 타입에는 영향이 없다. -->
+        <profileable android:shell="true" />
+
         <!-- 데모 화면은 전부 exported=true: adb shell am start로 각 화면에 직접 진입해 스크린샷을 찍는다 (string extra renderer=view, boolean extra autoplay=true).
              extra는 화면 옵션만 읽고 권한·데이터 접근이 없다. -->
         <activity
