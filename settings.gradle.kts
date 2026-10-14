@@ -39,3 +39,7 @@ include(":demo")
 
 // P0 spike 검증 모듈 — 미발행. host JVM에서 QuickJS + Prism 번들 동작을 확인한다 (DEVELOPMENT.md §7).
 include(":spikes:prism-quickjs")
+
+// P2 성능 하네스 — 미발행. Microbenchmark(라이브러리 API)와 Macrobenchmark(:demo benchmark 빌드 타입) 실기기 측정.
+include(":benchmark-micro")
+include(":benchmark-macro")

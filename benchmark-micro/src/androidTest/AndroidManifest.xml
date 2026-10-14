@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Author: JunyoungJung -->
+<!-- Date: 2026-10-14 -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- 측정 정확도: 테스트 APK를 디버그 불가로 둔다 (androidx.benchmark 공식 템플릿). -->
+    <application android:debuggable="false" tools:ignore="HardcodedDebugMode" />
+</manifest>
