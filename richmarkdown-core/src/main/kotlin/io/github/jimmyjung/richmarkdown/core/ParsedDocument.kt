@@ -107,13 +107,49 @@ public object LinkPolicy {
 
     /** 허용 scheme의 절대 URL만 돌려준다. 상대 URL·다른 scheme·파싱 실패는 null. */
     public fun allowedUrl(destination: String?): URI? {
-        if (destination.isNullOrEmpty()) return null
-        val uri = try {
-            URI(destination)
-        } catch (_: URISyntaxException) {
-            return null
-        }
+        if (destination.isNullOrEmpty() || containsInvisibleFormatCharacter(destination)) return null
+        val uri = parse(destination) ?: parse(encodingIllegalCharacters(destination)) ?: return null
         val scheme = uri.scheme?.lowercase() ?: return null
-        return if (scheme in allowedSchemes) uri else null
+        if (scheme !in allowedSchemes) return null
+        // http·https는 호스트(authority)가 있어야 한다. 비ASCII 호스트는 getHost()가 null이라 authority로 본다 (iOS와 같다).
+        if (scheme != "mailto" && uri.rawAuthority.isNullOrEmpty()) return null
+        return uri
     }
+
+    /**
+     * 주소에 보이지 않는 서식 문자(U+200B~U+200F, U+202A~U+202E, U+2060~U+2064, U+2066~U+2069, U+FEFF)가 있으면
+     * 링크로 만들지 않는다. 화면의 주소와 실제 대상이 달라 보이게 하는 속임수를 막는다 (iOS `LinkPolicy`와 같다).
+     */
+    public fun containsInvisibleFormatCharacter(text: String): Boolean = text.any { c ->
+        c in '\u200B'..'\u200F' || c in '\u202A'..'\u202E' || c in '\u2060'..'\u2064' || c in '\u2066'..'\u2069' || c == '\uFEFF'
+    }
+
+    private fun parse(text: String): URI? = try {
+        URI(text)
+    } catch (_: URISyntaxException) {
+        null
+    }
+
+    /**
+     * 경로·질의·조각에서 `java.net.URI`가 거부하는 ASCII(`\\`, 공백, `"`, `<`, `>`, `[`, `]`, `^`, `` ` ``, `{`, `|`, `}`)만
+     * 퍼센트 인코딩한다. 호스트는 건드리지 않는다 — 호스트에 쓸 수 없는 글자가 있으면 iOS `URL`처럼 링크로 받지 않는다(예제 346).
+     * CommonMark 자동 링크 `<https://example.com?find=\\*>`처럼 명세상 유효한 링크가 Android에서만 글자로 떨어지던 차이를 없앤다
+     * (CommonMark 예제 20·603, iOS URL은 같은 입력을 인코딩해 받아들인다). 비ASCII는 URI가 허용하므로 그대로 둔다.
+     */
+    private fun encodingIllegalCharacters(text: String): String {
+        val authorityStart = text.indexOf("://").let { if (it < 0) 0 else it + 3 }
+        val pathStart = text.indexOfAny(charArrayOf('/', '?', '#'), authorityStart).let { if (it < 0) text.length else it }
+        return buildString {
+            append(text, 0, pathStart)
+            var sawHash = false
+            for (c in text.substring(pathStart)) {
+                // 조각(#) 안의 두 번째 `#`는 URI가 거부한다. iOS URL처럼 인코딩해 받는다(퍼즈 패리티).
+                val illegal = c in ILLEGAL_ASCII || (c == '#' && sawHash)
+                if (c == '#') sawHash = true
+                if (illegal) append('%').append("%02X".format(c.code)) else append(c)
+            }
+        }
+    }
+
+    private const val ILLEGAL_ASCII = "\\ \"<>[]^`{|}"
 }

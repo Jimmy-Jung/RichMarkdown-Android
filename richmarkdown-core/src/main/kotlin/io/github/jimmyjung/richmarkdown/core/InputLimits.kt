@@ -19,6 +19,8 @@ public object InputLimits {
     public const val MAX_INPUT_UTF8_BYTES: Int = 262_144 // 256 KiB
     public const val DISPLAY_PREFIX_UTF8_BYTES: Int = 65_536 // 초과 시 표시 상한 64 KiB
     public const val MAX_BLOCK_QUOTE_DEPTH: Int = 64
+    /** 목록 표식 앞 들여쓰기 열 상한(탭 = 4열). 목록 중첩은 재귀 변환이라 깊이에 비례해 스택을 쓴다 (iOS와 동일 상한). */
+    public const val MAX_LIST_INDENT_COLUMNS: Int = 48
     public const val MAX_MATH_SOURCE_UTF8_BYTES: Int = 4_096 // 수식 엔진 호출 전 수식 source 상한
     public const val MAX_TABLE_COLUMNS: Int = 32
     public const val MAX_TABLE_CELLS: Int = 512
@@ -34,13 +36,21 @@ public object InputLimits {
 
     /** 상한 초과 입력을 grapheme 경계의 bounded prefix + 명시적 생략 marker로 바꾼다. */
     public fun bound(input: String): BoundedInput {
-        val byteBounded = boundUtf8Bytes(input)
-        val lineStart = firstLineExceedingBlockQuoteDepth(byteBounded.text) ?: return byteBounded
+        val byteBounded = boundUtf8Bytes(normalizedForParsing(input))
+        val lineStart = firstLineExceedingNestingLimits(byteBounded.text) ?: return byteBounded
         return BoundedInput(
             text = truncatedText(byteBounded.text.substring(0, lineStart)),
             wasTruncated = true,
         )
     }
+
+    /**
+     * 선두 BOM(U+FEFF)은 문서 내용이 아니므로 버리고, NUL은 U+FFFD로 바꾼다(CommonMark 명세의 보안 규칙).
+     * cmark(iOS)는 BOM을 건너뛰고 NUL을 치환하지만 commonmark-java는 둘 다 원문으로 두므로 여기서 맞춘다
+     * (fixture unicode/bom-leading, security/null-and-control-chars).
+     */
+    private fun normalizedForParsing(input: String): String =
+        input.trimStart('\uFEFF').let { if (it.indexOf('\u0000') >= 0) it.replace('\u0000', '\uFFFD') else it }
 
     private fun boundUtf8Bytes(input: String): BoundedInput {
         if (utf8Length(input, 0, input.length) <= MAX_INPUT_UTF8_BYTES) {
@@ -84,8 +94,8 @@ public object InputLimits {
         return bytes
     }
 
-    /** Block quote는 파서와 내부 모델 모두 재귀로 처리하므로 parse 전에 제한한다. */
-    private fun firstLineExceedingBlockQuoteDepth(input: String): Int? {
+    /** Block quote와 목록은 파서와 내부 모델 모두 재귀로 처리하므로 parse 전에 깊이를 제한한다. */
+    private fun firstLineExceedingNestingLimits(input: String): Int? {
         var lineStart = 0
         var openFence: CodeFence? = null
 
@@ -117,6 +127,7 @@ public object InputLimits {
             // opening fence가 깊은 quote 안에 있더라도 파서는 먼저 quote container를
             // 재귀로 만든다. 따라서 fence 판정보다 앞에서 depth를 제한해야 한다.
             if (quotePrefix.depth > MAX_BLOCK_QUOTE_DEPTH) return lineStart
+            if (listMarkerIndentColumns(line.subSequence(quotePrefix.contentStart, line.length)) > MAX_LIST_INDENT_COLUMNS) return lineStart
             openingFence(line.subSequence(quotePrefix.contentStart, line.length), quotePrefix.depth)
                 ?.let { openFence = it }
             lineStart = nextLineStart(input, lineEnd)
@@ -133,6 +144,39 @@ public object InputLimits {
             if (isNewline(input[i])) return i
         }
         return null
+    }
+
+    /** 줄이 목록 표식(`-`·`+`·`*`, 또는 1~9자리 숫자 뒤 `.`·`)`)으로 시작하면 그 앞 들여쓰기 열 수(탭 = 4열), 아니면 0. */
+    private fun listMarkerIndentColumns(content: CharSequence): Int {
+        var columns = 0
+        var index = 0
+        while (index < content.length) {
+            when (content[index]) {
+                ' ' -> columns += 1
+                '\t' -> columns += 4 - columns % 4
+                else -> break
+            }
+            index++
+        }
+        if (columns == 0 || index >= content.length || !startsWithListMarker(content, index)) return 0
+        return columns
+    }
+
+    private fun startsWithListMarker(text: CharSequence, start: Int): Boolean {
+        var afterMarker = start + 1
+        val first = text[start]
+        if (first in '0'..'9') {
+            var digits = 1
+            while (afterMarker < text.length && text[afterMarker] in '0'..'9' && digits < 9) {
+                digits++
+                afterMarker++
+            }
+            if (afterMarker >= text.length || (text[afterMarker] != '.' && text[afterMarker] != ')')) return false
+            afterMarker++
+        } else if (first != '-' && first != '+' && first != '*') {
+            return false
+        }
+        return afterMarker == text.length || text[afterMarker] == ' ' || text[afterMarker] == '\t'
     }
 
     private fun isNewline(c: Char): Boolean = when (c) {

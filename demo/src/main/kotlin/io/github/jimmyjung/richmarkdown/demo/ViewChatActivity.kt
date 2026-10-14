@@ -264,6 +264,8 @@ private class UserHolder(context: Context) : RecyclerView.ViewHolder(
         val d = resources.displayMetrics.density
         setPadding((14 * d).toInt(), (10 * d).toInt(), (14 * d).toInt(), (10 * d).toInt())
         background = bubble(if (isNight()) 0x260A84FF else 0x26007AFF)
+        // 테마 기본 글자색(회색)은 연한 파란 버블 위에서 대비 4.27:1이다(ATF TextContrastCheck). Compose 채팅과 같은 onBackground.
+        setTextColor(if (isNight()) 0xFFF2F2F7.toInt() else 0xFF1C1C1E.toInt())
         setTextIsSelectable(true)
     }
 
@@ -299,6 +301,7 @@ private class AssistantHolder(
         typeface = Typeface.DEFAULT_BOLD
         setPadding((8 * d).toInt(), (4 * d).toInt(), (8 * d).toInt(), (4 * d).toInt())
         background = bubble(if (isNight()) 0xFF3A3A3C.toInt() else 0xFFE5E5EA.toInt())
+        setTextColor(if (isNight()) 0xFFF2F2F7.toInt() else 0xFF1C1C1E.toInt())
     }
     private val markdownView = RichMarkdownView(context).apply {
         this.codeBlocks = codeBlocks

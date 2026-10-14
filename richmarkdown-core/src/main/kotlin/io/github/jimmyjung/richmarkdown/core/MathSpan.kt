@@ -62,8 +62,21 @@ public data class ProtectedMathSpan(
                 MathKind.InlineDollar -> 1
             }
             if (source.length < drop * 2) return ""
-            return source.substring(drop, source.length - drop).trim()
+            return source.substring(drop, source.length - drop).trim(::isFoundationWhitespace)
         }
+}
+
+/**
+ * iOS Foundation `CharacterSet.whitespacesAndNewlines`와 같은 집합(Z* 범주, U+0009~U+000D, U+0085, U+200B).
+ * Kotlin `isWhitespace()`는 U+200B를 공백으로 보지 않고 U+001C~U+001F를 공백으로 봐서, 수식 앞뒤의 너비 없는 공백이
+ * Android에서만 LaTeX에 남았다(퍼즈 패리티). 수식 LaTeX·코드 언어 정리는 이 집합으로 맞춘다.
+ */
+internal fun isFoundationWhitespace(c: Char): Boolean = when {
+    c == '\t' || c in '\n'..'\r' || c == '\u0085' || c == '\u200B' -> true
+    else -> when (Character.getType(c).toByte()) {
+        Character.SPACE_SEPARATOR, Character.LINE_SEPARATOR, Character.PARAGRAPH_SEPARATOR -> true
+        else -> false
+    }
 }
 
 /** 내부 diagnostic. 미완성·빈·중첩 delimiter 등은 plain text로 두고 여기 기록한다. */

@@ -25,6 +25,7 @@ import org.commonmark.node.HtmlInline
 import org.commonmark.node.Image
 import org.commonmark.node.IndentedCodeBlock
 import org.commonmark.node.Link
+import org.commonmark.node.LinkReferenceDefinition
 import org.commonmark.node.ListItem
 import org.commonmark.node.Node
 import org.commonmark.node.OrderedList
@@ -72,7 +73,7 @@ public object RichMarkdownParser {
         val masked = MathProtector.protect(text, scan.spans)
         val secondPass = parser.parse(masked)
 
-        val builder = ModelBuilder(text, scan.spans)
+        val builder = ModelBuilder(text, masked, scan.spans)
         val blocks = secondPass.children().mapNotNull { builder.convertBlock(it) }
 
         return ParsedDocument(
@@ -187,16 +188,71 @@ public object RichMarkdownParser {
 
     // MARK: - Pass 2 model build
 
-    private class ModelBuilder(private val original: String, spans: List<ProtectedMathSpan>) {
+    private class ModelBuilder(
+        private val original: String,
+        /** 2차 파싱한 문자열(수식을 `x`로 가린 같은 길이 버퍼). 표 셀의 `\|`는 이 버퍼에서 센다. */
+        private val parsed: String,
+        spans: List<ProtectedMathSpan>,
+    ) {
         private val inlineSpans = spans.filter { !it.kind.isDisplay }
         private val displaySpans = spans.filter { it.kind.isDisplay }
 
-        private fun Node.range(): Utf16Range? = utf16Range(original.length)
+        private fun Node.range(): Utf16Range? {
+            val raw = utf16Range(original.length) ?: return null
+            if (generateSequence(parent) { it.parent }.none { it is TableCell }) return raw
+            return Utf16Range(pipeEscapeAdjusted(raw.start), minOf(pipeEscapeAdjusted(raw.end), original.length))
+        }
+
+        /**
+         * 표 셀 안 인라인 위치 보정. commonmark-java 표 확장은 셀 문자열에서 `\|`의 역슬래시를 지운 뒤 인라인을 파싱해,
+         * 같은 셀에서 `\|` 뒤 위치가 그 개수만큼 앞당겨진다(퍼즈 10만 회 패리티: `| \(a\| 값 |` → `\(a|`로 끝 글자 손실,
+         * iOS swift-cmark와 같은 원인). 보고 위치가 든 셀의 시작부터 실제 위치 앞에 있는 `\|`마다 한 칸씩 되돌린다.
+         */
+        private fun pipeEscapeAdjusted(reported: Int): Int {
+            val lineStart = if (reported == 0) 0 else parsed.lastIndexOf('\n', reported - 1) + 1
+            val lineEnd = parsed.indexOf('\n', lineStart).let { if (it < 0) parsed.length else it }
+            val boundaries = ArrayList<Int>()
+            val escapes = ArrayList<Int>()
+            var i = lineStart
+            while (i < lineEnd) {
+                if (parsed[i] == '\\' && i + 1 < lineEnd && parsed[i + 1] == '|') {
+                    escapes.add(i)
+                    i += 2
+                    continue
+                }
+                if (parsed[i] == '|') boundaries.add(i)
+                i++
+            }
+            if (escapes.isEmpty()) return reported
+            val cellStart = (boundaries.lastOrNull { it < reported } ?: (lineStart - 1)) + 1
+            var adjusted = reported
+            for (escape in escapes) {
+                if (escape < cellStart) continue
+                if (escape < adjusted) adjusted++ else break
+            }
+            return adjusted
+        }
+
+        /**
+         * 시작 위치로 정렬된 span 목록에서 range와 겹치는 것만 이진 탐색으로 꺼낸다. Text 노드마다 전체를 거르면
+         * O(span × node)다 (iOS ModelBuilder.spans(_:overlapping:)와 동일).
+         */
+        private fun spansOverlapping(sorted: List<ProtectedMathSpan>, range: Utf16Range): List<ProtectedMathSpan> {
+            var low = 0
+            var high = sorted.size
+            while (low < high) {
+                val mid = (low + high) / 2
+                if (sorted[mid].originalRange.end <= range.start) low = mid + 1 else high = mid
+            }
+            var end = low
+            while (end < sorted.size && sorted[end].originalRange.start < range.end) end++
+            return sorted.subList(low, end).filter { it.originalRange.overlaps(range) }
+        }
 
         fun convertBlock(node: Node): ParsedBlock? = when (node) {
             is Paragraph -> {
                 val range = node.range()
-                val display = range?.let { r -> displaySpans.firstOrNull { r.overlaps(it.originalRange) } }
+                val display = range?.let { r -> spansOverlapping(displaySpans, r).firstOrNull() }
                 if (display != null) ParsedBlock.BlockMath(MathSegment(display))
                 else ParsedBlock.Paragraph(inlineRuns(node))
             }
@@ -204,7 +260,7 @@ public object RichMarkdownParser {
             is Heading -> ParsedBlock.Heading(level = node.level, runs = inlineRuns(node))
 
             is FencedCodeBlock -> {
-                val language = node.info?.trim()?.takeIf { it.isNotEmpty() }
+                val language = node.info?.trim(::isFoundationWhitespace)?.takeIf { it.isNotEmpty() }
                 ParsedBlock.CodeBlock(language = language, code = node.literal.orEmpty().removeSuffix("\n"))
             }
 
@@ -224,6 +280,9 @@ public object RichMarkdownParser {
             is HtmlBlock -> ParsedBlock.Paragraph(
                 listOf(InlineRun(InlineContent.Text(node.literal.orEmpty().removeSuffix("\n")))),
             )
+
+            // `[ref]: url` 정의 줄은 참조 링크 해석에만 쓰고 본문에 표시하지 않는다 (iOS cmark-gfm과 동일).
+            is LinkReferenceDefinition -> null
 
             else -> fallbackBlock(node)
         }
@@ -274,6 +333,33 @@ public object RichMarkdownParser {
             val runs = ArrayList<InlineRun>()
             for (child in container.children()) {
                 appendRuns(child, bold = false, italic = false, strikethrough = false, runs = runs)
+            }
+            return trimmedBlockEnd(runs, endsWithText = container.lastChild is Text)
+        }
+
+        /**
+         * CommonMark은 문단·제목·표 칸 끝의 공백을 내용에서 뺀다. 원문 slice로 run을 만들면 끝 공백·빈 run이 남아
+         * iOS(cmark)와 결과가 달랐다(패리티: CommonMark 예제 82, pathological/mixed-delimiters-50000).
+         * 끝 공백은 블록의 마지막 노드가 Text일 때만 뺀다 — 대체 텍스트가 빈 이미지 앞의 공백은 실제 내용이다(markdown/images-alt-only).
+         */
+        private fun trimmedBlockEnd(runs: MutableList<InlineRun>, endsWithText: Boolean): List<InlineRun> {
+            // CommonMark은 소프트·하드 줄바꿈 앞의 끝 공백·탭을 지운다. 원문 slice에는 남아 있어 iOS와 달랐다(퍼즈 패리티).
+            for (i in 0 until runs.size - 1) {
+                val next = runs[i + 1].content
+                val text = (runs[i].content as? InlineContent.Text)?.text ?: continue
+                if (next == InlineContent.SoftBreak || next == InlineContent.HardBreak) {
+                    val trimmed = text.trimEnd(' ', '\t')
+                    if (trimmed.length != text.length) runs[i] = runs[i].copy(content = InlineContent.Text(trimmed))
+                }
+            }
+            runs.removeAll { (it.content as? InlineContent.Text)?.text?.isEmpty() == true }
+            if (!endsWithText) return runs
+            val last = runs.lastOrNull() ?: return runs
+            val text = (last.content as? InlineContent.Text)?.text ?: return runs
+            val trimmed = text.trimEnd(' ', '\t')
+            when {
+                trimmed.isEmpty() -> runs.removeAt(runs.lastIndex)
+                trimmed.length != text.length -> runs[runs.lastIndex] = last.copy(content = InlineContent.Text(trimmed))
             }
             return runs
         }
@@ -346,7 +432,7 @@ public object RichMarkdownParser {
             // span이 없으면 2차 파싱의 Text가 Markdown entity/escape를 이미 해제했다.
             // 단, 수식 구분자 escape는 malformed LaTeX를 원문으로 보여 주는 fail-open 계약이라
             // 원문 slice 경로를 유지한다. 이 fast path가 entity Text마다 파서를 다시 돌리는 경로를 막는다.
-            val overlapping = inlineSpans.filter { it.originalRange.overlaps(range) }
+            val overlapping = spansOverlapping(inlineSpans, range)
             val source = original.substring(range.start, range.end)
             if (overlapping.isEmpty() && !containsLiteralMathDelimiterEscape(source)) {
                 runs.add(style(InlineContent.Text(text.literal.orEmpty())))

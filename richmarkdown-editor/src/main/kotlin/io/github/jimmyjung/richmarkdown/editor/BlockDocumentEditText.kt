@@ -578,10 +578,33 @@ class BlockDocumentEditText @JvmOverloads constructor(
         if (w != oldw && hasDisplayMath) scheduleRestyle()
     }
 
+    /**
+     * F-1: TextView는 맨 아래까지 스크롤한 경우가 아니면 아래 패딩(기본 96dp) 구간에 글자를 그리지 않는다
+     * (`TextView.onDraw`의 clipBottom이 `getExtendedPaddingBottom()`을 뺀다). 그래서 스크롤 중 화면 아래에 빈 띠가 남고
+     * 마지막 줄이 잘렸다(SM-G988N 실기기 QA, 2026-10-08). iOS `textContainerInset`처럼 아래 여백은 스크롤 범위에만 두고
+     * 그리기에서는 빼기 위해, 그리는 동안에만 아래 확장 패딩을 0으로 보고한다. gravity가 TOP이라 세로 오프셋 계산에는
+     * 영향이 없다(아래 패딩은 clip에만 쓰인다). 스크롤 범위·측정은 그리기 밖에서 원래 값을 쓴다.
+     */
+    private var isDrawingText = false
+
+    override fun getExtendedPaddingBottom(): Int = if (isDrawingText) 0 else super.getExtendedPaddingBottom()
+
     override fun onDraw(canvas: Canvas) {
         chipPainter.draw(canvas, this, chipFill, chipBorder, chipTextBounds)
-        super.onDraw(canvas)
+        isDrawingText = true
+        try {
+            super.onDraw(canvas)
+        } finally {
+            isDrawingText = false
+        }
     }
+
+    /**
+     * F-2: 드래그 스크롤이 끝나면 `ArrowKeyMovementMethod`가 이 메서드로 캐럿을 화면 안으로 옮긴다(플랫폼 기본 동작).
+     * 이 편집기는 캐럿이 든 수식 블록을 원문으로 보여 주므로, 스크롤만 해도 수식이 원문으로 바뀌고 높이가 변했다.
+     * iOS UITextView처럼 스크롤은 선택을 바꾸지 않는다. 다음 편집·선택 변경 때 TextView가 캐럿 위치로 다시 스크롤한다.
+     */
+    override fun moveCursorToVisibleOffset(): Boolean = false
 
     override fun getFreezesText(): Boolean = false
 

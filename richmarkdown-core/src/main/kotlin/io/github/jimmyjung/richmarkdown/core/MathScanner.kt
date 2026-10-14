@@ -46,6 +46,9 @@ public class MathScanner(
 
     private val chars: CharArray = text.toCharArray()
 
+    /** 줄 종료(LF·CR) 위치(오름차순). opener마다 줄 끝까지 훑으면 한 줄에 구분자가 많을 때 O(n²)다 (iOS와 동일). */
+    private val newlinePositions: IntArray = chars.indices.filter { chars[it] == '\n' || chars[it] == '\r' }.toIntArray()
+
     /** 정렬·병합된 hard barrier (code/HTML 전체 범위). */
     private val hardRanges: List<Utf16Range> = Utf16Range.merged(forbiddenRanges)
 
@@ -69,6 +72,13 @@ public class MathScanner(
         }
 
         spans.sortBy { it.originalRange.start }
+        // 3) 엔진에 들어갈 latex(구분자 제외)가 4 KiB를 넘으면 진단을 남긴다. span은 그대로 보호해
+        //    Markdown이 내부를 해석하지 않게 하고, 렌더 단계가 원문으로 표시한다 (iOS MathScanner 3단계와 동일).
+        for (span in spans) {
+            if (span.latex.toByteArray(Charsets.UTF_8).size > InputLimits.MAX_MATH_SOURCE_UTF8_BYTES) {
+                diagnostics.add(MathDiagnostic(MathDiagnostic.Kind.OversizedMathSource, span.originalRange))
+            }
+        }
         return Result(spans, diagnostics)
     }
 
@@ -130,15 +140,26 @@ public class MathScanner(
         diagnostics: MutableList<MathDiagnostic>,
     ) {
         var i = segment.start
+        // 같은 줄에서 한 번 `\)`가 없다고 판정되면 그 줄의 나머지 `\(`도 닫히지 않는다. opener마다 줄 끝까지
+        // 다시 훑으면 O(n²)다 (fixture pathological/paren-math-open-run-10000, iOS와 동일).
+        var unterminatedParenLine: Utf16Range? = null
         while (i < segment.end) {
             val c = chars[i]
             if (c == '\\' && i + 1 < segment.end && chars[i + 1] == '(' && !isBackslashEscaped(i)) {
-                val (span, nextIndex) = inlineParenSpan(i, segment, diagnostics)
+                val line = unterminatedParenLine
+                if (line != null && i >= line.start && i < line.end) {
+                    diagnostics.add(MathDiagnostic(MathDiagnostic.Kind.UnterminatedDelimiter, Utf16Range(i, line.end)))
+                    i += 2
+                    continue
+                }
+                val outcome = inlineParenSpan(i, segment, diagnostics)
+                outcome.unterminatedLineEnd?.let { unterminatedParenLine = Utf16Range(i, it) }
+                val span = outcome.span
                 if (span != null) {
                     spans.add(span)
                     i = span.originalRange.end
                 } else {
-                    i = nextIndex
+                    i = outcome.nextIndex
                 }
                 continue
             }
@@ -190,35 +211,38 @@ public class MathScanner(
      * 건너뛰어야 구간 전체가 plain text로 남는다. 미완성 구분자는 여는 delimiter 뒤부터
      * 계속 탐색해 같은 줄의 다른 후보를 놓치지 않는다.
      */
+    /** `\( ... \)` 판정 결과. [unterminatedLineEnd]가 있으면 그 줄에는 닫는 `\)`가 없다. */
+    private class ParenOutcome(val span: ProtectedMathSpan?, val nextIndex: Int, val unterminatedLineEnd: Int? = null)
+
     private fun inlineParenSpan(
         open: Int,
         segment: Utf16Range,
         diagnostics: MutableList<MathDiagnostic>,
-    ): Pair<ProtectedMathSpan?, Int> {
+    ): ParenOutcome {
         // 여는 delimiter가 link/image 내부에 있으면 수식이 아니다.
-        if (insideSoftRange(open)) return null to open + 2
+        if (insideSoftRange(open)) return ParenOutcome(null, open + 2)
         val contentStart = open + 2
         val lineEnd = endOfLine(contentStart, segment.end)
         val close = firstUnescapedDelimiter('\\', ')', Utf16Range(contentStart, lineEnd))
         if (close == null) {
             diagnostics.add(MathDiagnostic(MathDiagnostic.Kind.UnterminatedDelimiter, Utf16Range(open, lineEnd)))
-            return null to open + 2
+            return ParenOutcome(null, open + 2, unterminatedLineEnd = lineEnd)
         }
         val end = close + 2
         // 중첩 opener는 구간 전체가 plain text + diagnostic이다.
         if (firstUnescapedDelimiter('\\', '(', Utf16Range(contentStart, close)) != null) {
             diagnostics.add(MathDiagnostic(MathDiagnostic.Kind.NestedDelimiter, Utf16Range(open, end)))
-            return null to end
+            return ParenOutcome(null, end)
         }
         val inner = trimWhitespace(Utf16Range(contentStart, close))
         if (inner.isEmpty) {
             diagnostics.add(MathDiagnostic(MathDiagnostic.Kind.EmptyMath, Utf16Range(open, end)))
-            return null to end
+            return ParenOutcome(null, end)
         }
         if (!softRangesAllow(span = Utf16Range(open, end), content = Utf16Range(contentStart, close))) {
-            return null to end
+            return ParenOutcome(null, end)
         }
-        return makeSpan(Utf16Range(open, end), MathKind.InlineParen) to end
+        return ParenOutcome(makeSpan(Utf16Range(open, end), MathKind.InlineParen), end)
     }
 
     /**
@@ -337,13 +361,14 @@ public class MathScanner(
     }
 
     private fun endOfLine(start: Int, limit: Int): Int {
-        var i = start
-        while (i < limit) {
-            val c = chars[i]
-            if (c == '\n' || c == '\r') return i
-            i += 1
+        // newlinePositions에서 start 이상인 첫 위치를 이진 탐색한다.
+        var low = 0
+        var high = newlinePositions.size
+        while (low < high) {
+            val mid = (low + high) / 2
+            if (newlinePositions[mid] < start) low = mid + 1 else high = mid
         }
-        return limit
+        return if (low < newlinePositions.size) minOf(newlinePositions[low], limit) else limit
     }
 
     private fun trimWhitespace(range: Utf16Range): Utf16Range {
