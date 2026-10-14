@@ -9,6 +9,28 @@ semver다. `0.x`에서는 minor 버전에서도 공개 API가 바뀔 수 있다.
 
 - Maven Central 실제 발행(사용자 승인), commonmark-java upstream PR(D3a ③).
 
+## [0.4.0] - 2026-10-14
+
+검증 보강 릴리스다. iOS 저장소와 같은 공용 fixture·퍼즈로 두 구현을 비교하고, 검증이 찾은 결함을 모두 고쳤다.
+
+### 추가
+
+- iOS 공용 fixture 코퍼스 동기화(`scripts/sync-ios-fixtures.sh`, SHA-256 대조)와 core fixture·병리 입력·퍼즈 러너(iOS와 같은 입력열).
+- 계측 테스트: Mermaid 공격 입력 18종·WebView 설정 기준 5종, 하이라이트 언어 전수, 스트리밍 동등성(Compose·View), 데모 접근성(ATF 4.1.1, API 33 이상),
+  편집기 스크롤 회귀.
+- 성능 하네스 `:benchmark-micro`(Jetpack Microbenchmark)·`:benchmark-macro`(Macrobenchmark), `scripts/run-benchmarks.sh`·`measure-sizes.sh`.
+- `scripts/gradle-env.sh`: 빌드 산출물을 저장소 밖에 두고 Gradle 실행을 직렬화한다. 기기별 경로·볼륨 검증은 gitignore된 `scripts/gradle-env.local.sh`에서 읽는다.
+- 커버리지: Kover(JVM 단위, core 90% 기준)와 계측 테스트 JaCoCo(`enableAndroidTestCoverage`).
+- GitHub Actions 워크플로(단위 테스트·fixture 해시·Kover·lint·semgrep, 계측은 수동 job, 액션은 커밋 SHA 고정).
+
+### 수정
+
+- 편집기: 아래 패딩 구간에 글자를 그리지 않아 스크롤 중 줄이 잘리던 문제, 드래그 스크롤 뒤 캐럿이 옮겨져 수식 블록이 원문으로 바뀌던 문제.
+- core: 수식 4 KiB 초과 진단, 기호 반복 입력 O(n²), 중첩 목록 들여쓰기 48열 상한, 선두 BOM·NUL, 링크 참조 정의 줄 노출,
+  줄바꿈 앞 끝 공백, 조각의 두 번째 `#`, 표 셀 이스케이프 세로선 뒤 글자 손실, 보이지 않는 서식 문자가 있는 링크.
+- Mermaid: System WebView 93 미만(API 30 기본 이미지)에서 번들이 로드되지 않던 문제(iOS 공용 번들의 polyfill 반영).
+- 데모: View 채팅 글자 대비.
+
 ## [0.3.0] - 2026-10-08
 
 ### Added

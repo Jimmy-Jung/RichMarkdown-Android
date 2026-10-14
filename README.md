@@ -3,9 +3,9 @@
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.4-7F52FF.svg)](https://kotlinlang.org)
 [![Android](https://img.shields.io/badge/Android-minSdk%2030-3DDC84.svg)](https://developer.android.com)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.3.0%20beta-yellow.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.4.0%20beta-yellow.svg)](CHANGELOG.md)
 
-> **0.3.0 beta** — Compose·View 렌더러, 코드 블록 확장 2종, iOS `RichMarkdownBlockEditor`에 대응하는 opt-in 블록 편집기
+> **0.4.0 beta** — 검증 보강 릴리스(iOS 0.10.0과 공용 fixture·퍼즈 패리티, 편집기·Mermaid WebView 91 결함 수정). Compose·View 렌더러, 코드 블록 확장 2종, iOS `RichMarkdownBlockEditor`에 대응하는 opt-in 블록 편집기
 > `richmarkdown-editor`, 데모 앱, iOS와 같은 RaTeX 수식 엔진.
 > GitHub Release 태그로 배포하며 Maven Central에는 아직 발행하지 않았다. `0.x`에서는 minor 버전에도 공개 API가 바뀔 수 있다.
 > 변경 내역은 [CHANGELOG.md](CHANGELOG.md)를 본다.
@@ -64,16 +64,16 @@ WebView 없이 네이티브로 렌더한다. Jetpack Compose는 `RichMarkdown()`
 
 ## 설치
 
-Maven Central에는 아직 발행하지 않았다. 먼저 [GitHub Release의 Maven 저장소](#github-release의-maven-저장소) 안내에 따라 0.3.0 ZIP을 풀고 저장소를 추가한 뒤 다음 의존성을 사용한다.
+Maven Central에는 아직 발행하지 않았다. 0.4.0은 이 저장소의 `0.4.0` 태그를 체크아웃해 `./gradlew publishToMavenLocal`로 로컬 Maven 저장소에 설치하고, 앱의 저장소 목록에 `mavenLocal()`을 추가한 뒤 다음 의존성을 사용한다. 미리 빌드한 ZIP은 [GitHub Release의 Maven 저장소](#github-release의-maven-저장소)에 0.3.0까지 있다.
 
 ```kotlin
 dependencies {
-    implementation("io.github.jimmy-jung:richmarkdown:0.3.0")
+    implementation("io.github.jimmy-jung:richmarkdown:0.4.0")
 
     // opt-in. 필요한 것만 추가한다.
-    implementation("io.github.jimmy-jung:richmarkdown-highlight:0.3.0") // Prism + QuickJS
-    implementation("io.github.jimmy-jung:richmarkdown-mermaid:0.3.0")   // 공식 Mermaid + WebView
-    implementation("io.github.jimmy-jung:richmarkdown-editor:0.3.0")    // 블록 편집기, richmarkdown과 같은 버전
+    implementation("io.github.jimmy-jung:richmarkdown-highlight:0.4.0") // Prism + QuickJS
+    implementation("io.github.jimmy-jung:richmarkdown-mermaid:0.4.0")   // 공식 Mermaid + WebView
+    implementation("io.github.jimmy-jung:richmarkdown-editor:0.4.0")    // 블록 편집기, richmarkdown과 같은 버전
 }
 ```
 
@@ -482,7 +482,7 @@ paragraph 전체를 감싼 `$$ ... $$`는 여전히 block이다.
   [편집기 개선 기록](docs/report/improvements/richmarkdown-editor.md).
 - 메시지 목록의 세로 스크롤·virtualization과 읽기 폭 제한은 소비 앱 몫이다.
 - 입력 상한·cache 상한 수치는 측정 전 잠정값이며 공개 API로 고정하지 않는다.
-- Maven Central은 아직 발행하지 않았다. GitHub Release의 `richmarkdown-android-0.3.0-maven.zip`에는 다섯 모듈(core·렌더러·highlight·mermaid·editor)의 Release AAR/JAR·POM·Gradle metadata가 있어 로컬 Maven 저장소로 사용할 수 있다. 소스 체크아웃·`publishToMavenLocal`도 지원한다.
+- Maven Central은 아직 발행하지 않았다. 0.4.0은 소스 체크아웃 후 `publishToMavenLocal`로 설치한다. GitHub Release의 `richmarkdown-android-0.3.0-maven.zip`에는 0.3.0 다섯 모듈(core·렌더러·highlight·mermaid·editor)의 Release AAR/JAR·POM·Gradle metadata가 있어 로컬 Maven 저장소로 사용할 수 있다.
 
 ---
 
@@ -514,6 +514,7 @@ paragraph 전체를 감싼 `$$ ... $$`는 여전히 block이다.
 
 | Android | iOS | 비고 |
 |---|---|---|
+| 0.4.0 | 0.10.0 | 공용 fixture·퍼즈 패리티(미해결 0건), 표 셀 이스케이프 세로선·편집기 스크롤·WebView 91 Mermaid 수정 |
 | 0.3.0 | 0.9.1 | opt-in 블록 편집기(`RichMarkdownBlockEditor` 대응) 추가. 블록 모델·Markdown 계약 동일 |
 | 0.2.0 | 0.9.0 | 최신 요청 게시·입력 보호·Mermaid 수명 개선 |
 | 0.1.0 | 0.8.0 | 수식 문법·fail-open·스트리밍 규칙 동일. 수식 서체는 KaTeX 단일 |
@@ -547,7 +548,7 @@ paragraph 전체를 감싼 `$$ ... $$`는 여전히 block이다.
 
 ## GitHub Release의 Maven 저장소
 
-0.3.0 Release의 `richmarkdown-android-0.3.0-maven.zip`을 프로젝트의 `local-repository` 폴더에 풀고 저장소를 추가한다. 다섯 모듈(core·렌더러·highlight·mermaid·editor)의 metadata가 전이 의존성을 선언하며, 외부 의존성은 기존 Google Maven·Maven Central에서 해결한다.
+0.3.0 이하 버전은 Release ZIP으로 쓸 수 있다. 0.3.0 Release의 `richmarkdown-android-0.3.0-maven.zip`을 프로젝트의 `local-repository` 폴더에 풀고 저장소를 추가한다. 다섯 모듈(core·렌더러·highlight·mermaid·editor)의 metadata가 전이 의존성을 선언하며, 외부 의존성은 기존 Google Maven·Maven Central에서 해결한다.
 
 ```kotlin
 dependencyResolutionManagement {
