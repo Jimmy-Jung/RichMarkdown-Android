@@ -156,7 +156,18 @@ class CoreFuzzTest {
             return Outcome(null, "parse 예외: $t")
         }
         val elapsedMs = (System.nanoTime() - started) / 1_000_000
-        if (elapsedMs >= PARSE_BUDGET_MS) return Outcome(doc, "parse $elapsedMs ms ≥ $PARSE_BUDGET_MS ms")
+        if (elapsedMs >= PARSE_BUDGET_MS) {
+            // 공유 CI 러너의 일시 정지가 한 번의 측정을 부풀릴 수 있다(iOS GitHub Actions 2.15 s, 같은 입력 로컬 2 ms).
+            // 같은 입력을 세 번 다시 재서 가장 빠른 값으로 판정한다. 입력 자체가 느리면 세 번 모두 상한을 넘는다.
+            val fastestMs = (1..3).minOf {
+                val start = System.nanoTime()
+                RichMarkdownParser.parse(input, OPTIONS)
+                (System.nanoTime() - start) / 1_000_000
+            }
+            if (fastestMs >= PARSE_BUDGET_MS) {
+                return Outcome(doc, "parse $fastestMs ms ≥ $PARSE_BUDGET_MS ms (재측정 3회 최소값, 첫 측정 $elapsedMs ms)")
+            }
+        }
         roundTripFailure(input)?.let { return Outcome(doc, it) }
         limitViolation(doc)?.let { return Outcome(doc, it) }
         return Outcome(doc, null)
