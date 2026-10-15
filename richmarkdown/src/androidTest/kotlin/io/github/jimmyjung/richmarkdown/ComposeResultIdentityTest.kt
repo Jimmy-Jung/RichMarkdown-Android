@@ -69,7 +69,8 @@ class ComposeResultIdentityTest {
         override suspend fun spans(code: String, language: String): List<RichMarkdownHighlightSpan> {
             val request = Pending()
             calls.add(request)
-            return request.response.await()
+            // 공개 확장점은 취소 협조를 요구하지 않는다 — 취소를 무시한 구현체의 늦은 완료도 견뎌야 한다.
+            return withContext(NonCancellable) { request.response.await() }
         }
         // 구현체의 값 동등성으로 서로 다른 요청 state를 공유하면 안 된다.
         override fun equals(other: Any?): Boolean = other is ControlledHighlighter
@@ -115,6 +116,24 @@ class ComposeResultIdentityTest {
         assertEquals("원문만 바뀌면 새 결과가 올 때까지 이전 색을 유지한다", 1, styles().size)
         complete(sourceChange)
 
+        // 새 원문의 결과가 먼저, 취소된 이전 원문의 결과가 나중에 끝나도 새 색을 덮지 않는다.
+        compose.runOnIdle { code.value = "var beta = 23" }
+        val stale = pending(first)
+        compose.runOnIdle { code.value = "var beta = 234" }
+        val latest = pending(first)
+        compose.runOnIdle {
+            latest.response.complete(listOf(
+                RichMarkdownHighlightSpan(Utf16Range(0, 3), RichMarkdownHighlightKind.Keyword),
+                RichMarkdownHighlightSpan(Utf16Range(11, 14), RichMarkdownHighlightKind.Number),
+            ))
+        }
+        compose.waitUntil(5_000) { styles().size == 2 }
+        compose.runOnIdle {
+            stale.response.complete(listOf(RichMarkdownHighlightSpan(Utf16Range(0, 3), RichMarkdownHighlightKind.Keyword)))
+        }
+        compose.waitForIdle()
+        assertEquals("취소된 이전 원문의 늦은 결과가 새 원문의 색을 덮었다", 2, styles().size)
+
         compose.runOnIdle { language.value = "swift" }
         val languageChange = pending(first)
         assertTrue("같은 코드라도 언어가 바뀌면 이전 색을 버린다", styles().isEmpty())
@@ -124,7 +143,7 @@ class ComposeResultIdentityTest {
         val rendererChange = pending(second)
         assertTrue("값이 동등한 다른 구현체도 이전 결과를 공유하지 않는다", styles().isEmpty())
         complete(rendererChange)
-        assertEquals("var beta = 2", compose.onNodeWithText(code.value).fetchSemanticsNode()
+        assertEquals("var beta = 234", compose.onNodeWithText(code.value).fetchSemanticsNode()
             .config[SemanticsProperties.Text].single().text)
 
         compose.runOnIdle { code.value = "va" }

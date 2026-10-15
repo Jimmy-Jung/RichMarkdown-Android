@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import io.github.jimmyjung.richmarkdown.RichMarkdownHighlightSpan
 import io.github.jimmyjung.richmarkdown.RichMarkdownSyntaxHighlighting
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 /** iOS `CodeBlockView`: 모서리 8, 본문 패딩 12, 헤더 좌우 패딩 12, 라벨-버튼 최소 간격 8. */
@@ -100,14 +101,17 @@ private fun CodeBody(language: String?, code: String, ctx: RenderContext) {
     // codeBlocks의 equals는 구현체의 값 동등성이 아니라 참조 동일성을 비교한다.
     // 원문만 바뀌면(스트리밍 tick) 새 결과가 올 때까지 이전 색을 유지한다 — plain으로 되돌렸다 다시 칠하면
     // tick마다 레이아웃이 두 번 일어나고 색이 깜빡인다. 원문 밖으로 나간 범위는 highlightedCode가 버린다.
-    // 이전 원문의 작업은 LaunchedEffect 재시작으로 취소되어 이 state를 덮지 못한다.
     var spans by remember(ctx.codeBlocks, language) { mutableStateOf(emptyList<RichMarkdownHighlightSpan>()) }
     LaunchedEffect(ctx.codeBlocks, language, code) {
-        spans = if (highlighter == null || language == null || code.isEmpty()) {
+        val result = if (highlighter == null || language == null || code.isEmpty()) {
             emptyList()
         } else {
             highlightSpans(highlighter, code, language)
         }
+        // 이전 원문의 이펙트도 같은 state에 쓴다. 취소를 무시한 구현체(계약상 허용)의 늦은 결과가
+        // 새 원문의 색을 덮지 않게 쓰기 직전에 확인한다 — 취소(재구성 적용)와 대입이 모두 main이라 사이에 끼지 않는다.
+        ensureActive()
+        spans = result
     }
     val styles = ctx.styles
     val text = remember(code, spans, styles) { highlightedCode(code, spans, styles) }
