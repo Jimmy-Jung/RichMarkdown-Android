@@ -96,9 +96,12 @@ internal fun CodeBlockView(language: String?, code: String, ctx: RenderContext) 
 @Composable
 private fun CodeBody(language: String?, code: String, ctx: RenderContext) {
     val highlighter = ctx.codeBlocks.highlighter
-    // state 자체를 원문·언어·구현 인스턴스별로 분리한다. 이전 작업은 이전 state만 갱신할 수 있다.
+    // state 자체를 언어·구현 인스턴스별로 분리한다. 다른 언어·구현의 색은 섞지 않는다.
     // codeBlocks의 equals는 구현체의 값 동등성이 아니라 참조 동일성을 비교한다.
-    var spans by remember(ctx.codeBlocks, language, code) { mutableStateOf(emptyList<RichMarkdownHighlightSpan>()) }
+    // 원문만 바뀌면(스트리밍 tick) 새 결과가 올 때까지 이전 색을 유지한다 — plain으로 되돌렸다 다시 칠하면
+    // tick마다 레이아웃이 두 번 일어나고 색이 깜빡인다. 원문 밖으로 나간 범위는 highlightedCode가 버린다.
+    // 이전 원문의 작업은 LaunchedEffect 재시작으로 취소되어 이 state를 덮지 못한다.
+    var spans by remember(ctx.codeBlocks, language) { mutableStateOf(emptyList<RichMarkdownHighlightSpan>()) }
     LaunchedEffect(ctx.codeBlocks, language, code) {
         spans = if (highlighter == null || language == null || code.isEmpty()) {
             emptyList()

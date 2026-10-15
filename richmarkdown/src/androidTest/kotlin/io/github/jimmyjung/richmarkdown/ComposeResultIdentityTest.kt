@@ -77,7 +77,7 @@ class ComposeResultIdentityTest {
     }
 
     @Test
-    fun codeLanguageAndImplementationChangesStartPlainAtSamePosition() {
+    fun codeChangeKeepsPreviousSpansAndLanguageOrImplementationChangeStartsPlain() {
         val first = ControlledHighlighter()
         val second = ControlledHighlighter()
         val code = mutableStateOf("val alpha = 1")
@@ -111,7 +111,8 @@ class ComposeResultIdentityTest {
 
         compose.runOnIdle { code.value = "var beta = 2" }
         val sourceChange = pending(first)
-        assertTrue("B 작업이 보류된 동안 A 색 범위는 없어야 한다", styles().isEmpty())
+        // 스트리밍 tick마다 plain → 색 레이아웃이 두 번 일어나고 색이 깜빡이지 않게 한다.
+        assertEquals("원문만 바뀌면 새 결과가 올 때까지 이전 색을 유지한다", 1, styles().size)
         complete(sourceChange)
 
         compose.runOnIdle { language.value = "swift" }
@@ -125,6 +126,11 @@ class ComposeResultIdentityTest {
         complete(rendererChange)
         assertEquals("var beta = 2", compose.onNodeWithText(code.value).fetchSemanticsNode()
             .config[SemanticsProperties.Text].single().text)
+
+        compose.runOnIdle { code.value = "va" }
+        val shorter = pending(second)
+        assertTrue("원문 밖으로 나간 이전 범위는 버린다", styles().isEmpty())
+        compose.runOnIdle { shorter.response.complete(emptyList()) }
     }
 
     /**
