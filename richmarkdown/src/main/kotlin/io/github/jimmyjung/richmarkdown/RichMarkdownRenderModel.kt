@@ -103,6 +103,7 @@ class RichMarkdownRenderModel(scope: CoroutineScope) {
         /**
          * 아직 파싱되지 않은 최신 요청을 표시할 안전한 원문. 과대 입력은 [InputLimits]의 표시
          * 상한으로 잘려 있어 fallback에도 원본 전체 문자열이 전달되지 않는다.
+         * [document]가 null이 될 때만 갱신한다 — 스트리밍 append 동안에는 이전 값이 남는다.
          */
         val fallbackMarkdown: String,
     )
@@ -134,7 +135,8 @@ class RichMarkdownRenderModel(scope: CoroutineScope) {
      */
     @MainThread
     fun submit(request: Request) {
-        check(Looper.getMainLooper().isCurrentThread) { "submit은 main 스레드에서만 호출한다" }
+        // JVM 단위 테스트의 android.jar stub은 두 Looper를 모두 null로 돌려줘 이 비교를 통과한다.
+        check(Looper.myLooper() == Looper.getMainLooper()) { "submit은 main 스레드에서만 호출한다" }
         // 직접 생성한 Request도 fallback·cache·worker에 보관하기 전에 같은 상한을 적용한다.
         val canonical = request.copy(boundedInput = InputLimits.bound(request.boundedInput))
         if (canonical == lastRequest) return
@@ -151,11 +153,13 @@ class RichMarkdownRenderModel(scope: CoroutineScope) {
         // 예외는 **스트리밍 append**다: 표시 중인 문서가 새 markdown의 prefix면 새 parse가
         // 게시될 때까지 이전 렌더(문서 + 이미지)를 유지한다. 매 갱신 원문 fallback으로
         // 되돌리면 화면 전체가 원문 ↔ 렌더를 오가며 출렁인다(iOS 데모 실측).
+        // 이때 상태를 아예 게시하지 않는다 — 문서가 있는 동안 fallback은 아무도 읽지 않는데,
+        // fallback만 바꾼 게시도 tick마다 재구성·rebuild를 한 번 더 일으킨다.
         val current = _state.value
         _state.value = when {
             parseIdentityChanged && !isStreamingAppend ->
                 State(null, null, emptyMap(), null, canonical.markdown)
-            parseIdentityChanged -> current.copy(fallbackMarkdown = canonical.markdown)
+            parseIdentityChanged -> current
             // 수식 설정만 바뀐 경우: parsed document는 유지하고 이미지만 무효화한다.
             else -> current.copy(mathImages = emptyMap(), imageRequest = null)
         }

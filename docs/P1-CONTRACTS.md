@@ -95,8 +95,8 @@ class RichMarkdownRenderModel(scope: CoroutineScope) {   // scope = main dispatc
 }
 ```
 
-게시 규칙(iOS와 동일): parseIdentity 변경 시 fallbackMarkdown 갱신; 스트리밍 append(이전 identity가 새 markdown의 prefix)면
-이전 document·images 유지, 아니면 비움; raster 설정만 바뀌면 document 유지·images 비움. worker: ParseCache 조회 → 파싱
+게시 규칙(iOS와 동일): parseIdentity가 바뀌면 document·images를 비우고 fallbackMarkdown 갱신. 단 스트리밍 append(이전 identity가
+새 markdown의 prefix)면 아무것도 게시하지 않는다 — parse가 게시될 때까지 이전 상태 그대로(문서가 있는 동안 fallback은 읽지 않는다); raster 설정만 바뀌면 document 유지·images 비움. worker: ParseCache 조회 → 파싱
 (append는 캐시 저장 안 함) → generation 확인 → 캐시된 raster로 1차 게시 → 누락 segment raster(각 단계 generation 확인) → 최종 게시.
 D3a: 파서 호출을 `try { … } catch (e: NoSuchMethodError | NoClassDefFoundError)`로 감싸 실패 시 document=null 유지(원문 fallback) + `Log.e`.
 

@@ -81,8 +81,7 @@ class RenderModelIntegrationTest {
             val append = request(current.markdown + " 추가 문장")
             withContext(Dispatchers.Main.immediate) {
                 model.submit(append)
-                assertSame(hydrated.document, model.state.value.document)
-                assertEquals(hydrated.mathImages, model.state.value.mathImages)
+                assertSame("append는 parse 게시 전까지 상태를 게시하지 않는다", hydrated, model.state.value)
             }
             withTimeout(10_000) { model.awaitIdle() }
             assertEquals(append.parseIdentity, model.state.value.parseIdentity)

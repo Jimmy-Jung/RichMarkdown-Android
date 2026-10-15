@@ -6,10 +6,17 @@ package io.github.jimmyjung.richmarkdown
 import io.github.jimmyjung.richmarkdown.core.InputLimits
 import io.github.jimmyjung.richmarkdown.core.ParsedBlock
 import io.github.jimmyjung.richmarkdown.core.ParsedDocument
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -172,5 +179,47 @@ class RenderModelLogicTest {
         advanceTimeBy(1000)
         runCurrent()
         assertEquals("flush 뒤 trailing 없음", "abcde", buffer.text.value)
+    }
+
+    // MARK: - 렌더 모델 게시 (Main = 테스트 dispatcher, parse는 실제 Default 스레드)
+
+    /** [body]에 모델과 게시 기록(초기값 제외)을 넘긴다. 수집기는 Unconfined라 `_state` 대입 순간 기록된다. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private suspend fun TestScope.withModel(
+        body: suspend (RichMarkdownRenderModel, MutableList<RichMarkdownRenderModel.State>) -> Unit,
+    ) {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val model = RichMarkdownRenderModel(backgroundScope)
+            val published = ArrayList<RichMarkdownRenderModel.State>()
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { model.state.collect { published += it } }
+            published.clear()
+            body(model, published)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    /**
+     * 스트리밍 append는 parse가 게시될 때까지 상태를 내보내지 않는다. 문서가 있는 동안에는 어느 렌더러도
+     * fallback 원문을 읽지 않는다 — fallback만 바꾼 게시는 tick마다 재구성·rebuild를 한 번 더 일으킨다.
+     */
+    @Test
+    fun streamingAppend_publishesNothingUntilParseLands() = runTest {
+        withModel { model, published ->
+            model.submit(request("# 제목"))
+            model.awaitIdle()
+            val shown = model.state.value
+            assertEquals(identity("# 제목"), shown.parseIdentity)
+
+            published.clear()
+            model.submit(request("# 제목\n\n본문"))
+            assertSame("append 직후 상태는 그대로다", shown, model.state.value)
+            assertTrue("append 직후 게시가 없어야 한다: $published", published.isEmpty())
+
+            model.awaitIdle()
+            assertEquals("parse 게시 1회", 1, published.size)
+            assertEquals(identity("# 제목\n\n본문"), published.single().parseIdentity)
+        }
     }
 }
