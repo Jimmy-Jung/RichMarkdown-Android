@@ -4,6 +4,8 @@
 package io.github.jimmyjung.richmarkdown.demo
 
 import android.os.Bundle
+import android.os.SystemClock
+import android.os.Trace
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.MainThread
@@ -49,6 +51,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -100,8 +103,13 @@ private class SseController(private val scope: CoroutineScope) {
     val buffer = RichMarkdownStreamingTextBuffer(scope)
     var isStreaming by mutableStateOf(false)
     var status by mutableStateOf("로컬 시뮬레이션 준비")
-    var chunkCount by mutableStateOf(0)
-    var receivedChars by mutableStateOf(0)
+
+    // 청크마다(20 Hz) 바뀌는 카운터는 Compose state로 두지 않는다 — 화면 전체가 청크마다 재구성된다.
+    // 화면은 버퍼 게시(≤10 Hz)·스트림 상태가 바뀔 때 읽는다 (SseScreen `counter`).
+    var chunkCount = 0
+        private set
+    var receivedChars = 0
+        private set
 
     private var job: Job? = null
     private var call: Call? = null
@@ -119,6 +127,8 @@ private class SseController(private val scope: CoroutineScope) {
         isStreaming = true
         status = if (url.isBlank()) "로컬 시뮬레이션 중…" else "연결 중…"
         job = scope.launch {
+            // 성능 트레이스에서 스트림 구간만 고를 수 있게 비동기 구간으로 감싼다 (cookie = 실행 번호).
+            Trace.beginAsyncSection(TRACE_SECTION, run)
             try {
                 if (url.isBlank()) streamLocal(rateHz) else streamEndpoint(url.trim())
             } catch (e: CancellationException) {
@@ -126,6 +136,7 @@ private class SseController(private val scope: CoroutineScope) {
             } catch (e: Exception) {
                 if (run == runID) status = "오류: ${e.message ?: e.javaClass.simpleName}"
             } finally {
+                Trace.endAsyncSection(TRACE_SECTION, run)
                 // 중지 직후 다시 시작한 스트림을 이전 작업의 finally가 덮지 않는다.
                 if (run == runID) {
                     buffer.flush()
@@ -150,12 +161,15 @@ private class SseController(private val scope: CoroutineScope) {
     private suspend fun streamLocal(rateHz: Int) {
         val splitter = SseLineSplitter()
         val decoder = SseDecoder()
-        for (frame in SseFixtures.frames()) {
+        // 프레임 i는 시작 + i/rateHz 시각에 보낸다(절대 시각). 상대 delay는 처리 시간만큼 밀려 느린 빌드일수록
+        // 부하가 줄어 측정이 공정하지 않다. 늦어진 프레임은 기다리지 않고 바로 보낸다.
+        val start = SystemClock.uptimeMillis()
+        for ((index, frame) in SseFixtures.frames().withIndex()) {
             for (byte in frame.toByteArray()) {
                 val event = splitter.consume(byte)?.let(decoder::consume) ?: continue
                 if (!applyEvent(event)) return
             }
-            delay(1_000L / rateHz)
+            delay(start + (index + 1) * 1_000L / rateHz - SystemClock.uptimeMillis())
         }
         decoder.finish()?.let(::applyEvent)
     }
@@ -210,6 +224,11 @@ private class SseController(private val scope: CoroutineScope) {
             false
         }
     }
+
+    companion object {
+        /** 스트림 하나의 비동기 트레이스 구간 이름 (Perfetto에서 프레임 지표를 이 구간으로 자른다). */
+        const val TRACE_SECTION = "sse-stream"
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -225,8 +244,9 @@ private fun SseScreen(autoplay: Boolean) {
     val scrollState = rememberScrollState()
 
     // 콘텐츠가 자라 maxValue가 바뀔 때마다 바닥으로. 갱신은 버퍼가 10Hz로 합쳐 주므로 스크롤 레이아웃을 포화시키지 않는다.
-    LaunchedEffect(scrollState.maxValue) {
-        if (controller.isStreaming) scrollState.scrollTo(scrollState.maxValue)
+    // maxValue를 컴포지션에서 읽지 않는다(snapshotFlow) — 읽으면 바뀔 때마다 화면 전체가 재구성된다.
+    LaunchedEffect(scrollState) {
+        snapshotFlow { scrollState.maxValue }.collect { max -> if (controller.isStreaming) scrollState.scrollTo(max) }
     }
     DisposableEffect(Unit) { onDispose { controller.stop() } }
     LaunchedEffect(autoplay) { if (autoplay) controller.start(url, rateHz) }
@@ -242,11 +262,16 @@ private fun SseScreen(autoplay: Boolean) {
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    // 카운터는 버퍼 게시(text)·스트림 상태가 바뀔 때만 다시 읽는다 — 청크(20 Hz)마다 다시 재지 않는다.
+                    val counter = remember(text, controller.isStreaming) {
+                        "${controller.chunkCount} 청크 · ${controller.receivedChars}자"
+                    }
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (controller.isStreaming) {
+                            // 스트리밍 중 계속 회전해 갱신이 없어도 vsync마다 프레임을 만든다. 프레임 지표는 이 프레임을 포함한다(의도적으로 유지).
                             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                         }
                         Surface(
@@ -254,7 +279,7 @@ private fun SseScreen(autoplay: Boolean) {
                             color = MaterialTheme.colorScheme.surfaceVariant,
                         ) {
                             Text(
-                                "${controller.chunkCount} 청크 · ${controller.receivedChars}자",
+                                counter,
                                 Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold,

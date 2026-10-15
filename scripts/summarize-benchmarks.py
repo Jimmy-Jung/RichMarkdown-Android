@@ -6,7 +6,8 @@
     scripts/summarize-benchmarks.py [P2_DIR]   (기본 $RICHMARKDOWN_BUILD_DIR/p2, scripts/gradle-env.sh와 같은 빌드 폴더)
 
 Microbenchmark: timeNs median·min, allocationCount median. Macrobenchmark: StartupTimingMetric(timeToInitialDisplayMs)
-median·P50·P90(runs 보간), FrameTimingMetric frameDurationCpuMs P50/P90/P99·frameOverrunMs P50/P90/P99.
+median·P50·P90(runs 보간), FrameTimingMetric frameDurationCpuMs·frameOverrunMs 합산 P50/P90/P95/P99 + 반복별 P50/P90(프레임 수).
+합산 백분위는 한 반복의 이상치(예: BufferQueue stuffing)에 끌려가므로 반복별 값을 같이 본다.
 """
 import glob
 import json
@@ -75,13 +76,15 @@ def startup_table(rows):
 
 
 def frame_table(rows):
-    lines = ["| 시나리오 | 지표 | P50 | P90 | P95 | P99 | 프레임 수(반복별) |", "|---|---|---:|---:|---:|---:|---|"]
+    lines = ["| 시나리오 | 지표 | P50 | P90 | P95 | P99 | 반복별 P50 / P90 (프레임 수) |", "|---|---|---:|---:|---:|---:|---|"]
     for _, _, b in rows:
         for metric, stats in sorted(b.get("sampledMetrics", {}).items()):
-            counts = [len(r) for r in stats.get("runs", [])]
+            per_run = ", ".join(
+                f"{fmt(percentile(r, 50))} / {fmt(percentile(r, 90))} ({len(r)})" for r in stats.get("runs", [])
+            )
             lines.append(
                 f"| `{b['name']}` | {metric} | {fmt(stats.get('P50'))} | {fmt(stats.get('P90'))} | {fmt(stats.get('P95'))} "
-                f"| {fmt(stats.get('P99'))} | {', '.join(map(str, counts))} |"
+                f"| {fmt(stats.get('P99'))} | {per_run} |"
             )
     return lines
 
@@ -189,7 +192,10 @@ def main():
         "- 원본: `micro/**/benchmarkData.json`, `macro/**/benchmarkData.json`(+ `.perfetto-trace`), `sizes.json`, `device.txt`.", "",
         "## 1. Microbenchmark (`:benchmark-micro`, release 테스트 APK)", "", *micro_table(micro), "",
         "## 2. 런치 (`StartupTimingMetric`, 5회)", "", *startup_table(startup), "",
-        "## 3. 프레임 타이밍 (`FrameTimingMetric`, 5회, Partial 컴파일)", "", *frame_table(frames), "",
+        "## 3. 프레임 타이밍 (`FrameTimingMetric`, 5회, Partial 컴파일)", "",
+        "P50~P99는 5회 합산(라이브러리 계산), 반복별 값은 runs 선형 보간. SSE 화면은 스트리밍 중 진행 표시가 계속 돌아 "
+        "갱신 없는 vsync 프레임도 포함한다. 스트림 구간만 보려면 트레이스의 비동기 구간 `sse-stream`으로 자른다.", "",
+        *frame_table(frames), "",
         "## 3-b. 스크롤 프레임 시간 (`dumpsys gfxinfo`, 하네스 없음 — §6 참고)", "", *gfxinfo_section(), "",
         "## 4. 크기", "", *sizes_section(), "",
         "## 5. 기기·환경", "", *device_section(micro), "",
