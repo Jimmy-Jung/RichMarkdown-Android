@@ -136,11 +136,18 @@ private class SseController(private val scope: CoroutineScope) {
             } catch (e: Exception) {
                 if (run == runID) status = "오류: ${e.message ?: e.javaClass.simpleName}"
             } finally {
-                Trace.endAsyncSection(TRACE_SECTION, run)
-                // 중지 직후 다시 시작한 스트림을 이전 작업의 finally가 덮지 않는다.
-                if (run == runID) {
-                    buffer.flush()
-                    isStreaming = false
+                try {
+                    // 중지 직후 다시 시작한 스트림을 이전 작업의 finally가 덮지 않는다.
+                    if (run == runID) {
+                        buffer.flush()
+                        isStreaming = false
+                        // 스트림 끝의 렌더링(마지막 게시·그 parse 결과·streaming→null 전환)까지 구간에 넣는다.
+                        // ponytail: 고정 대기 — 렌더 모델의 idle 신호를 데모에서 받게 되면 그것으로 바꾼다.
+                        delay(END_SETTLE_MILLIS)
+                    }
+                } finally {
+                    // 중지·화면 이탈로 취소되면 대기 없이 바로 닫는다.
+                    Trace.endAsyncSection(TRACE_SECTION, run)
                 }
             }
         }
@@ -226,8 +233,11 @@ private class SseController(private val scope: CoroutineScope) {
     }
 
     companion object {
-        /** 스트림 하나의 비동기 트레이스 구간 이름 (Perfetto에서 프레임 지표를 이 구간으로 자른다). */
+        /** 스트림 하나의 비동기 트레이스 구간 이름 (Perfetto에서 프레임 지표를 이 구간으로 자른다). 스트림 종료 전환까지 포함한다. */
         const val TRACE_SECTION = "sse-stream"
+
+        /** 종료 뒤 마지막 parse 게시와 streaming→null 재구성이 그려질 때까지 구간을 열어 두는 시간. */
+        private const val END_SETTLE_MILLIS = 300L
     }
 }
 
