@@ -6,6 +6,7 @@ package io.github.jimmyjung.richmarkdown
 import io.github.jimmyjung.richmarkdown.core.InputLimits
 import io.github.jimmyjung.richmarkdown.core.ParsedBlock
 import io.github.jimmyjung.richmarkdown.core.ParsedDocument
+import io.github.jimmyjung.richmarkdown.core.RichMarkdownParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -222,4 +223,39 @@ class RenderModelLogicTest {
             assertEquals(identity("# 제목\n\n본문"), published.single().parseIdentity)
         }
     }
+
+    /**
+     * parse 게시는 이전 문서의 같은 위치·같은 값 블록을 이전 인스턴스로 바꿔 끼운다(인용·리스트 자식까지).
+     * Compose strong skipping(===)과 StateFlow 동등 비교가 바뀌지 않은 블록에서 바로 끝난다. 값은 새 parse와 같다.
+     */
+    @Test
+    fun streamingAppend_reusesUnchangedBlockInstances() = runTest {
+        withModel { model, _ ->
+            suspend fun publish(markdown: String): ParsedDocument {
+                model.submit(request(markdown))
+                model.awaitIdle()
+                val document = model.state.value.document!!
+                assertEquals("새 parse와 같아야 한다", RichMarkdownParser.parse(InputLimits.bound(markdown), LatexDollarMathOptions.None.toCore()), document)
+                return document
+            }
+            val a = publish("# 제목\n\n> 인용\n>\n> 둘")
+            val b = publish("# 제목\n\n> 인용\n>\n> 둘째\n\n- 하나\n- 둘")
+            val full = "# 제목\n\n> 인용\n>\n> 둘째\n\n- 하나\n- 둘\n- 셋"
+            val c = publish(full)
+
+            assertSame("바뀌지 않은 헤딩", a.blocks[0], b.blocks[0])
+            assertSame("바뀐 인용의 바뀌지 않은 자식", quote(a).children[0], quote(b).children[0])
+            assertSame("바뀌지 않은 인용 전체", b.blocks[1], c.blocks[1])
+            val before = (b.blocks[2] as ParsedBlock.UnorderedList).items
+            val after = (c.blocks[2] as ParsedBlock.UnorderedList).items
+            assertSame("바뀐 리스트의 바뀌지 않은 항목", before[0], after[0])
+            assertSame(before[1], after[1])
+
+            model.submit(request(full, fontSizePx = 40f))
+            model.awaitIdle()
+            assertSame("같은 문서(수식 설정만 변경)는 이전 문서 그대로", c, model.state.value.document)
+        }
+    }
+
+    private fun quote(document: ParsedDocument) = document.blocks[1] as ParsedBlock.BlockQuote
 }

@@ -10,6 +10,7 @@ import androidx.annotation.MainThread
 import io.github.jimmyjung.richmarkdown.core.CoalescingWorker
 import io.github.jimmyjung.richmarkdown.core.InputLimits
 import io.github.jimmyjung.richmarkdown.core.MathSegment
+import io.github.jimmyjung.richmarkdown.core.ParsedBlock
 import io.github.jimmyjung.richmarkdown.core.ParsedDocument
 import io.github.jimmyjung.richmarkdown.core.RichMarkdownParser
 import kotlinx.coroutines.CoroutineScope
@@ -193,7 +194,7 @@ class RichMarkdownRenderModel(scope: CoroutineScope) {
         val request = job.request
 
         val cacheKey = ParseCache.key(request.markdown, request.dollarMath, request.wasTruncated)
-        val parsed = ParseCache.document(cacheKey) ?: run {
+        val newDocument = ParseCache.document(cacheKey) ?: run {
             val fresh = parseOrNull(request) ?: return@withContext
             // 스트리밍 append는 저장하지 않는다. 스트림의 첫 제출(교체)만 캐시에 남긴다.
             // 확인과 삽입을 같은 main turn에서 해 그 사이 새 요청이 끼어들지 않게 한다.
@@ -204,6 +205,11 @@ class RichMarkdownRenderModel(scope: CoroutineScope) {
         }
 
         if (!isCurrent(job.generation)) return@withContext
+
+        // 표시 중인 문서(스트리밍 prefix·같은 parse identity)와 같은 블록은 이전 인스턴스를 쓴다. 블록 컴포저블의
+        // 참조 비교(strong skipping)·View 재사용 비교·StateFlow 동등 비교가 바뀌지 않은 블록에서 바로 끝난다.
+        // 문서가 비워진 교체(셀 재사용)는 공유할 이전 문서가 없다. 같은 값만 바꿔 끼우므로 읽는 시점이 늦어도 안전하다.
+        val parsed = _state.value.document?.let { sharingUnchangedBlocks(newDocument, it) } ?: newDocument
 
         // 1단계 게시: 캐시된 raster는 즉시 hydration하고, 없는 수식만 원문으로 시작한다.
         // 전부 캐시에 있으면(스트리밍 append의 일반 경우) 이것이 단일 게시다 — 이미 raster된
@@ -280,6 +286,39 @@ class RichMarkdownRenderModel(scope: CoroutineScope) {
             val all = parsed.allMathSegments
             return if (request.rastersDisplayMath) all else all.filter { !it.kind.isDisplay }
         }
+
+        /**
+         * [next]에서 [previous]의 같은 위치 블록과 같은(==) 블록을 그 인스턴스로 바꾼다. 인용·리스트는 자식까지 내려간다.
+         * 결과는 [next]와 같다(==). 전부 같으면 [previous] 자체를 돌려준다.
+         * ponytail: 바뀐 컨테이너는 동등 비교 뒤 자식을 다시 비교한다(깊이만큼 반복). 문서 크기 O(n·깊이), parse와 같은 worker에서 한다.
+         */
+        fun sharingUnchangedBlocks(next: ParsedDocument, previous: ParsedDocument): ParsedDocument =
+            if (next == previous) previous else next.copy(blocks = shareBlocks(next.blocks, previous.blocks))
+
+        private fun shareBlocks(next: List<ParsedBlock>, previous: List<ParsedBlock>): List<ParsedBlock> =
+            next.mapIndexed { index, block -> shareBlock(block, previous.getOrNull(index)) }
+
+        private fun shareBlock(next: ParsedBlock, previous: ParsedBlock?): ParsedBlock = when {
+            previous == null -> next
+            next == previous -> previous
+            next is ParsedBlock.BlockQuote && previous is ParsedBlock.BlockQuote ->
+                ParsedBlock.BlockQuote(shareBlocks(next.children, previous.children))
+            next is ParsedBlock.UnorderedList && previous is ParsedBlock.UnorderedList ->
+                ParsedBlock.UnorderedList(shareItems(next.items, previous.items))
+            next is ParsedBlock.OrderedList && previous is ParsedBlock.OrderedList ->
+                next.copy(items = shareItems(next.items, previous.items))
+            else -> next
+        }
+
+        private fun shareItems(next: List<List<ParsedBlock>>, previous: List<List<ParsedBlock>>): List<List<ParsedBlock>> =
+            next.mapIndexed { index, item ->
+                val old = previous.getOrNull(index)
+                when {
+                    old == null -> item
+                    item == old -> old
+                    else -> shareBlocks(item, old)
+                }
+            }
 
         fun renderKey(segment: MathSegment, request: Request): MathRenderKey = MathRenderKey(
             latex = segment.latex,
