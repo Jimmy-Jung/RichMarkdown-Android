@@ -2,8 +2,12 @@
 
 package io.github.jimmyjung.richmarkdown
 
+import android.content.Context
+import android.view.View
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.referentialEqualityPolicy
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -33,6 +37,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicInteger
 
 class ComposeResultIdentityTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
@@ -120,6 +125,40 @@ class ComposeResultIdentityTest {
         complete(rendererChange)
         assertEquals("var beta = 2", compose.onNodeWithText(code.value).fetchSemanticsNode()
             .config[SemanticsProperties.Text].single().text)
+    }
+
+    /**
+     * 스트리밍 append는 바뀌지 않은 블록을 다시 그리지 않는다 — parse 전 재구성(같은 문서)과 parse 게시 뒤 모두.
+     * 코드 블록 본문이 실행될 때마다 `diagramRenderer(language)`가 [RichMarkdownDiagramRendering.languages]를 읽는다.
+     */
+    @Test
+    fun streamingAppendDoesNotRecomposeUnchangedCodeBlock() {
+        val bodies = AtomicInteger()
+        val counter = object : RichMarkdownDiagramRendering {
+            override val languages: Set<String>
+                get() = setOf("counter").also { bodies.incrementAndGet() }
+            override fun createView(context: Context, source: String, theme: RichMarkdownTheme, onSizeChange: () -> Unit): View =
+                View(context)
+            @Composable
+            override fun Content(source: String, theme: RichMarkdownTheme) = BasicText(source)
+        }
+        val options = RichMarkdownCodeBlockOptions(diagram = counter)
+        val markdown = mutableStateOf("```counter\nA\n```\n\n첫 문단")
+        compose.setContent {
+            RichMarkdown(markdown.value, streaming = RichMarkdownStreamingOptions.Default, codeBlocks = options, isDarkTheme = false)
+        }
+        fun awaitParagraph(text: String) = compose.waitUntil(10_000) {
+            compose.onAllNodesWithText(text).fetchSemanticsNodes(atLeastOneRootRequired = false).isNotEmpty()
+        }
+        awaitParagraph("첫 문단")
+        compose.waitForIdle()
+        val before = bodies.get()
+        assertTrue("코드 블록이 그려져야 한다", before > 0)
+
+        compose.runOnIdle { markdown.value += " 추가" }
+        awaitParagraph("첫 문단 추가")
+        compose.waitForIdle()
+        assertEquals("append 재구성이 바뀌지 않은 코드 블록을 다시 그렸다", before, bodies.get())
     }
 
     @Test

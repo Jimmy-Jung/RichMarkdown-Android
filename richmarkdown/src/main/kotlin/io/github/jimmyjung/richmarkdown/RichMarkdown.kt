@@ -94,8 +94,12 @@ fun RichMarkdown(
             } else {
                 emptyMap()
             }
-            val ctx = RenderContext(styles, images, codeBlocks, fontSizePx, colorArgb, onOpenLink)
-            val tail = streaming?.let { StreamingTailContext(it, dollarMath.toCore()) }
+            // 문맥은 입력별로 remember한다. 블록은 문맥을 참조 동일성(===)으로 비교하므로, 재구성마다 새로 만들면
+            // 문서가 그대로인 재구성(parse 전 스트리밍 append)에서도 BlockColumn 전체를 다시 그린다.
+            val ctx = remember(styles, images, codeBlocks, fontSizePx, colorArgb, onOpenLink) {
+                RenderContext(styles, images, codeBlocks, fontSizePx, colorArgb, onOpenLink)
+            }
+            val tail = remember(streaming, dollarMath) { streaming?.let { StreamingTailContext(it, dollarMath.toCore()) } }
             BlockColumn(document.blocks, ctx, tail, Modifier.fillMaxWidth())
         } else {
             // Request가 입력을 제한해 보관하므로 raw markdown을 UI에 직접 전달하지 않는다.
